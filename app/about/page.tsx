@@ -1,13 +1,20 @@
-"use client"
+"use client";
 
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Heart, Users, Shield, Star, CheckCircle, ArrowRight } from "lucide-react"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import Image from "next/image"
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Heart,
+  Users,
+  Shield,
+  Star,
+  CheckCircle,
+  ArrowRight,
+} from "lucide-react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function AboutPage() {
   const values = [
@@ -32,37 +39,44 @@ export default function AboutPage() {
     {
       icon: Star,
       title: "Excellence",
-      description: "We strive for excellence in every aspect of our service, from user experience to customer support.",
+      description:
+        "We strive for excellence in every aspect of our service, from user experience to customer support.",
     },
-  ]
+  ];
 
   const team = [
     {
       name: "Kwame Asante",
       role: "Founder & CEO",
-      image: "/placeholder.svg?height=300&width=300",
+      image: "/funeral1.jpg",
       bio: "Former tech executive with a passion for using technology to serve Ghanaian communities.",
     },
     {
       name: "Akosua Mensah",
       role: "Head of Operations",
-      image: "/placeholder.svg?height=300&width=300",
+      image: "/funeral3.jpg",
       bio: "Community leader with 15+ years experience in funeral services and cultural preservation.",
     },
     {
       name: "Kofi Boateng",
       role: "Lead Developer",
-      image: "/placeholder.svg?height=300&width=300",
+      image: "/funeral5.jpg",
       bio: "Full-stack developer dedicated to creating accessible, user-friendly digital experiences.",
     },
-  ]
+  ];
 
   const milestones = [
-    { year: "2023", event: "FuneralsGhana founded with a vision to digitize funeral services" },
+    {
+      year: "2023",
+      event: "FuneralsGhana founded with a vision to digitize funeral services",
+    },
     { year: "2023", event: "First 100 families joined our platform" },
     { year: "2024", event: "Expanded to all 16 regions of Ghana" },
-    { year: "2024", event: "Reached 500+ families served and ₵50K+ in community support" },
-  ]
+    {
+      year: "2024",
+      event: "Reached 500+ families served and ₵50K+ in community support",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
@@ -87,8 +101,9 @@ export default function AboutPage() {
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-slate-300 leading-relaxed mb-8">
-                We're on a mission to honor lives, preserve memories, and strengthen communities across Ghana through
-                dignified digital funeral services.
+                We're on a mission to honor lives, preserve memories, and
+                strengthen communities across Ghana through dignified digital
+                funeral services.
               </p>
               <div className="flex flex-col sm:flex-row gap-6 justify-center">
                 <Button
@@ -123,36 +138,48 @@ export default function AboutPage() {
                 className="grid lg:grid-cols-2 gap-16 items-center"
               >
                 <div>
-                  <h2 className="text-4xl font-bold text-slate-800 mb-6">Our Mission</h2>
+                  <h2 className="text-4xl font-bold text-slate-800 mb-6">
+                    Our Mission
+                  </h2>
                   <p className="text-lg text-slate-600 leading-relaxed mb-6">
-                    In Ghanaian culture, funerals are not just ceremonies—they're celebrations of life, community
-                    gatherings, and sacred traditions that bring families together. We recognized that in our digital
-                    age, these important moments needed a platform that honors tradition while embracing modern
-                    convenience.
+                    In Ghanaian culture, funerals are not just
+                    ceremonies—they're celebrations of life, community
+                    gatherings, and sacred traditions that bring families
+                    together. We recognized that in our digital age, these
+                    important moments needed a platform that honors tradition
+                    while embracing modern convenience.
                   </p>
                   <p className="text-lg text-slate-600 leading-relaxed mb-8">
-                    FuneralsGhana was born from the understanding that every life deserves to be celebrated with
-                    dignity, and every family deserves support during their time of grief. We're here to bridge
-                    distances, preserve memories, and ensure that no one grieves alone.
+                    FuneralsGhana was born from the understanding that every
+                    life deserves to be celebrated with dignity, and every
+                    family deserves support during their time of grief. We're
+                    here to bridge distances, preserve memories, and ensure that
+                    no one grieves alone.
                   </p>
                   <div className="flex items-center space-x-4">
                     <CheckCircle className="w-6 h-6 text-green-500" />
-                    <span className="text-slate-700 font-medium">Culturally sensitive and respectful</span>
+                    <span className="text-slate-700 font-medium">
+                      Culturally sensitive and respectful
+                    </span>
                   </div>
                   <div className="flex items-center space-x-4 mt-3">
                     <CheckCircle className="w-6 h-6 text-green-500" />
-                    <span className="text-slate-700 font-medium">Accessible to all Ghanaian communities</span>
+                    <span className="text-slate-700 font-medium">
+                      Accessible to all Ghanaian communities
+                    </span>
                   </div>
                   <div className="flex items-center space-x-4 mt-3">
                     <CheckCircle className="w-6 h-6 text-green-500" />
-                    <span className="text-slate-700 font-medium">Secure and private by design</span>
+                    <span className="text-slate-700 font-medium">
+                      Secure and private by design
+                    </span>
                   </div>
                 </div>
 
                 <div className="relative">
                   <div className="bg-gradient-to-br from-amber-100 to-orange-200 rounded-3xl p-8">
                     <Image
-                      src="/placeholder.svg?height=400&width=500"
+                      src="/funeral2.jpg"
                       alt="Ghanaian funeral ceremony"
                       width={500}
                       height={400}
@@ -162,9 +189,13 @@ export default function AboutPage() {
                   <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-6 max-w-xs">
                     <div className="flex items-center space-x-3 mb-3">
                       <Heart className="w-6 h-6 text-red-500" />
-                      <span className="font-semibold text-slate-800">500+ Families Served</span>
+                      <span className="font-semibold text-slate-800">
+                        500+ Families Served
+                      </span>
                     </div>
-                    <p className="text-sm text-slate-600">Trusted by families across all 16 regions of Ghana</p>
+                    <p className="text-sm text-slate-600">
+                      Trusted by families across all 16 regions of Ghana
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -182,9 +213,12 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl font-bold text-slate-800 mb-4">Our Core Values</h2>
+              <h2 className="text-4xl font-bold text-slate-800 mb-4">
+                Our Core Values
+              </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                These principles guide everything we do and shape how we serve Ghanaian families
+                These principles guide everything we do and shape how we serve
+                Ghanaian families
               </p>
             </motion.div>
 
@@ -202,8 +236,12 @@ export default function AboutPage() {
                       <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
                         <value.icon className="w-8 h-8 text-white" />
                       </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-4">{value.title}</h3>
-                      <p className="text-slate-600 leading-relaxed">{value.description}</p>
+                      <h3 className="text-xl font-bold text-slate-800 mb-4">
+                        {value.title}
+                      </h3>
+                      <p className="text-slate-600 leading-relaxed">
+                        {value.description}
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -222,9 +260,12 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl font-bold text-slate-800 mb-4">Meet Our Team</h2>
+              <h2 className="text-4xl font-bold text-slate-800 mb-4">
+                Meet Our Team
+              </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Passionate individuals dedicated to serving Ghanaian families with technology and compassion
+                Passionate individuals dedicated to serving Ghanaian families
+                with technology and compassion
               </p>
             </motion.div>
 
@@ -249,9 +290,15 @@ export default function AboutPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                     </div>
                     <CardContent className="p-6">
-                      <h3 className="text-xl font-bold text-slate-800 mb-1">{member.name}</h3>
-                      <p className="text-amber-600 font-semibold mb-3">{member.role}</p>
-                      <p className="text-slate-600 leading-relaxed">{member.bio}</p>
+                      <h3 className="text-xl font-bold text-slate-800 mb-1">
+                        {member.name}
+                      </h3>
+                      <p className="text-amber-600 font-semibold mb-3">
+                        {member.role}
+                      </p>
+                      <p className="text-slate-600 leading-relaxed">
+                        {member.bio}
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -288,10 +335,14 @@ export default function AboutPage() {
                     className="flex items-center space-x-8"
                   >
                     <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">{milestone.year}</span>
+                      <span className="text-white font-bold text-lg">
+                        {milestone.year}
+                      </span>
                     </div>
                     <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-6">
-                      <p className="text-lg text-slate-200">{milestone.event}</p>
+                      <p className="text-lg text-slate-200">
+                        {milestone.event}
+                      </p>
                     </div>
                   </motion.div>
                 ))}
@@ -311,10 +362,13 @@ export default function AboutPage() {
               className="max-w-4xl mx-auto text-center"
             >
               <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-3xl p-12 text-white">
-                <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Honor Your Loved One?</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                  Ready to Honor Your Loved One?
+                </h2>
                 <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-                  Join hundreds of families who have chosen our platform to create meaningful, dignified tributes that
-                  celebrate lives and bring communities together.
+                  Join hundreds of families who have chosen our platform to
+                  create meaningful, dignified tributes that celebrate lives and
+                  bring communities together.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
                   <Button
@@ -343,5 +397,5 @@ export default function AboutPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }

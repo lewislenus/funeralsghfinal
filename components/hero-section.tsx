@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Heart, Users, Shield, Play, Star } from "lucide-react"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import Image from "next/image"
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Heart, Users, Shield, Play, Star } from "lucide-react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 export function HeroSection() {
   return (
@@ -100,8 +100,9 @@ export function HeroSection() {
                   transition={{ duration: 0.8, delay: 0.5 }}
                   className="text-xl md:text-2xl text-slate-600 leading-relaxed max-w-2xl"
                 >
-                  Ghana's premier digital platform connecting families and communities to celebrate lives, share
-                  condolences, and provide meaningful support during times of loss.
+                  Ghana's premier digital platform connecting families and
+                  communities to celebrate lives, share condolences, and provide
+                  meaningful support during times of loss.
                 </motion.p>
               </div>
 
@@ -144,16 +145,28 @@ export function HeroSection() {
                 className="grid grid-cols-3 gap-8 pt-12 border-t border-slate-200"
               >
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-800 mb-2">500+</div>
-                  <div className="text-sm text-slate-600 font-medium">Families Served</div>
+                  <div className="text-3xl font-bold text-slate-800 mb-2">
+                    500+
+                  </div>
+                  <div className="text-sm text-slate-600 font-medium">
+                    Families Served
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-800 mb-2">10K+</div>
-                  <div className="text-sm text-slate-600 font-medium">Condolences Shared</div>
+                  <div className="text-3xl font-bold text-slate-800 mb-2">
+                    10K+
+                  </div>
+                  <div className="text-sm text-slate-600 font-medium">
+                    Condolences Shared
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-800 mb-2">₵50K+</div>
-                  <div className="text-sm text-slate-600 font-medium">Support Raised</div>
+                  <div className="text-3xl font-bold text-slate-800 mb-2">
+                    ₵50K+
+                  </div>
+                  <div className="text-sm text-slate-600 font-medium">
+                    Support Raised
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
@@ -175,7 +188,7 @@ export function HeroSection() {
                   <div className="flex items-center space-x-6 mb-8">
                     <div className="relative">
                       <Image
-                        src="/placeholder.svg?height=80&width=80"
+                        src="/funeral1.jpg"
                         alt="Profile"
                         width={80}
                         height={80}
@@ -186,15 +199,20 @@ export function HeroSection() {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-slate-800">Kwame Asante</h3>
+                      <h3 className="text-2xl font-bold text-slate-800">
+                        Kwame Asante
+                      </h3>
                       <p className="text-slate-600 text-lg">1945 - 2024</p>
-                      <p className="text-amber-600 font-semibold">Beloved Teacher & Leader</p>
+                      <p className="text-amber-600 font-semibold">
+                        Beloved Teacher & Leader
+                      </p>
                     </div>
                   </div>
 
                   <p className="text-slate-600 mb-8 leading-relaxed">
-                    A dedicated educator who touched thousands of lives across Ghana. His legacy of wisdom and
-                    compassion continues to inspire...
+                    A dedicated educator who touched thousands of lives across
+                    Ghana. His legacy of wisdom and compassion continues to
+                    inspire...
                   </p>
 
                   <div className="grid grid-cols-2 gap-6 mb-8">
@@ -228,10 +246,13 @@ export function HeroSection() {
                 >
                   <div className="flex items-center space-x-3 mb-3">
                     <Shield className="w-6 h-6 text-green-500" />
-                    <span className="font-semibold text-slate-700">Secure & Private</span>
+                    <span className="font-semibold text-slate-700">
+                      Secure & Private
+                    </span>
                   </div>
                   <p className="text-sm text-slate-600">
-                    Bank-level security protects your donations and personal messages.
+                    Bank-level security protects your donations and personal
+                    messages.
                   </p>
                 </motion.div>
 
@@ -249,8 +270,12 @@ export function HeroSection() {
                   className="absolute -bottom-6 -left-6 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl shadow-xl p-6 w-56"
                 >
                   <div className="text-2xl font-bold mb-2">24/7</div>
-                  <p className="text-amber-100 font-medium">Support Available</p>
-                  <p className="text-sm text-amber-200 mt-2">Always here when families need us most</p>
+                  <p className="text-amber-100 font-medium">
+                    Support Available
+                  </p>
+                  <p className="text-sm text-amber-200 mt-2">
+                    Always here when families need us most
+                  </p>
                 </motion.div>
               </div>
 
@@ -261,5 +286,5 @@ export function HeroSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -96,7 +96,6 @@ export default function ContactPage() {
       answer: "Yes, as a funeral organizer, you have full control to moderate and approve condolence messages before they appear publicly."
     }
   ]
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <Header />
@@ -228,4 +227,52 @@ export default function ContactPage() {
                               <SelectItem value="support">Technical Support</SelectItem>
                               <SelectItem value="billing">Billing Question</SelectItem>
                               <SelectItem value="partnership">Partnership</SelectItem>
-                              <SelectItem value="feedback">Feedback</SelectItem>\
+                              <SelectItem value="feedback">Feedback</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="subject" className="text-slate-700 font-medium">Subject</Label>
+                        <Input
+                          id="subject"
+                          name="subject"
+                          value={formData.subject}
+                          onChange={handleChange}
+                          placeholder="Subject of your inquiry"
+                          className="mt-2 rounded-xl border-slate-300 focus:border-amber-500 focus:ring-amber-500/20"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="message" className="text-slate-700 font-medium">Message *</Label>
+                        <textarea
+                          id="message"
+                          name="message"
+                          value={formData.message}
+                          onChange={handleChange}
+                          required
+                          rows={5}
+                          className="mt-2 w-full rounded-xl border-slate-300 focus:border-amber-500 focus:ring-amber-500/20 p-3"
+                          placeholder="Type your message here..."
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full py-3 px-6 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-colors duration-200 disabled:opacity-60"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Sending..." : "Send Message"}
+                      </button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              {/* Add other content here if needed */}
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}

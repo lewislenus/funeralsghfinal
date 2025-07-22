@@ -12,6 +12,8 @@ import { Footer } from "@/components/footer"
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Heart, Shield, Users } from "lucide-react"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -20,15 +22,26 @@ export default function LoginPage() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    setError(null)
 
-    console.log("Login attempt:", formData)
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      router.push("/dashboard")
+    }
     setIsLoading(false)
   }
 
@@ -117,6 +130,12 @@ export default function LoginPage() {
                 className="w-full max-w-md mx-auto"
               >
                 <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
+                  {error && (
+                    <div className="p-4 mb-4 bg-red-100 text-red-800 rounded-lg text-center">
+                      {error}
+                    </div>
+                  )}
+
                   <CardHeader className="text-center pb-8">
                     <CardTitle className="text-3xl font-bold text-slate-800 mb-2">Sign In</CardTitle>
                     <p className="text-slate-600">Access your funeral management dashboard</p>

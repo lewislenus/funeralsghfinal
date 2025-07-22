@@ -12,6 +12,8 @@ import { Footer } from "@/components/footer"
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -25,15 +27,43 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setError(null)
 
-    console.log("Signup attempt:", formData)
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.")
+      setIsLoading(false)
+      return
+    }
+
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+          phone: formData.phone,
+        },
+      },
+    })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess(true)
+      // Redirect to login page after a short delay to show the success message
+      setTimeout(() => {
+        router.push("/login")
+      }, 3000)
+    }
     setIsLoading(false)
   }
 
@@ -126,6 +156,17 @@ export default function SignupPage() {
                 className="w-full max-w-md mx-auto"
               >
                 <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
+                  {success && (
+                    <div className="p-4 bg-green-100 text-green-800 rounded-lg text-center">
+                      Success! Please check your email to confirm your account. Redirecting to login...
+                    </div>
+                  )}
+                  {error && (
+                    <div className="p-4 bg-red-100 text-red-800 rounded-lg text-center">
+                      {error}
+                    </div>
+                  )}
+
                   <CardHeader className="text-center pb-6">
                     <CardTitle className="text-3xl font-bold text-slate-800 mb-2">Create Account</CardTitle>
                     <p className="text-slate-600">Start honoring lives with dignity</p>

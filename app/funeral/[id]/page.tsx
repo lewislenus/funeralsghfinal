@@ -1,85 +1,68 @@
-import { FuneralEventPage } from "@/components/funeral-event-page"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { createServerClient } from "@/lib/supabase/server";
+import { FuneralEventPage } from "@/components/funeral-event-page";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { notFound } from "next/navigation";
 
-// Sample funeral data
-const sampleFuneral = {
-  id: "1",
-  deceased: {
-    name: "Kwame Asante",
-    photo: "/placeholder.svg?height=300&width=300",
-    dob: "1945-03-15",
-    dod: "2024-01-10",
-    biography:
-      "Kwame Asante was a beloved teacher and community leader who dedicated over 40 years of his life to education in Kumasi. Born in a small village in the Ashanti Region, he worked tirelessly to improve educational opportunities for children in rural communities. He was known for his wisdom, kindness, and unwavering commitment to his students and community. Kwame leaves behind a legacy of thousands of students whose lives he touched and a community that will forever remember his contributions. His passion for learning and teaching inspired generations of young minds, and his impact on education in Ghana will be felt for years to come.",
-  },
-  funeral: {
-    date: "2024-01-20",
-    time: "09:00",
-    venue: "St. Peter's Cathedral",
-    region: "Ashanti",
-    location: "Kumasi, Ghana",
-    coordinates: { lat: 6.6885, lng: -1.6244 },
-  },
-  family: {
-    name: "Asante Family",
-    contact: "Contact: +233 24 123 4567",
-    details:
-      "Survived by his loving wife Mary Asante, 4 children (Akosua, Kwaku, Ama, and Kofi), and 12 grandchildren. The family requests that in lieu of flowers, donations be made to the Kumasi Education Foundation.",
-  },
-  poster: "/placeholder.svg?height=600&width=400",
-  brochure: "/sample-brochure.pdf",
-  livestream: "https://youtube.com/watch?v=example",
-  isUpcoming: true,
-  condolences: [
-    {
-      id: "1",
-      name: "Akosua Mensah",
-      message:
-        "Mr. Asante was my teacher in primary school. He inspired me to become a teacher myself. His dedication to education and his students was unmatched. Rest in peace, sir.",
-      location: "Accra",
-      timestamp: "2024-01-12T10:30:00Z",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: "2",
-      name: "Kofi Boateng",
-      message:
-        "A great man who touched many lives. My condolences to the family. Mr. Asante taught my children and they still speak of his kindness.",
-      location: "Kumasi",
-      timestamp: "2024-01-12T14:15:00Z",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: "3",
-      name: "Ama Osei",
-      message:
-        "Thank you for everything you did for our community. Your legacy will live on through all the lives you touched.",
-      location: "Kumasi",
-      timestamp: "2024-01-13T09:20:00Z",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-  ],
-  donations: {
-    total: 5420,
-    currency: "GHS",
-    supporters: 23,
-    recent: [
-      { name: "Anonymous", amount: 200, message: "In memory of a great teacher" },
-      { name: "Former Students", amount: 500, message: "Thank you for everything, Mr. Asante" },
-      { name: "Kumasi Teachers Union", amount: 1000, message: "Honoring a dedicated educator" },
-    ],
-  },
-}
+export default async function FuneralPage({ params }: { params: { id: string } }) {
+  console.log("Fetching funeral with ID:", params.id);
+  
+  const supabase = createServerClient();
+  const { data: funeral, error } = await supabase
+    .from("funerals")
+    .select("*")
+    .eq("id", params.id)
+    .eq("status", "approved")
+    .single();
 
-export default function FuneralPage({ params }: { params: { id: string } }) {
+  console.log("Supabase response:", { data: funeral, error });
+
+  if (error) {
+    console.error("Error fetching funeral:", error);
+    notFound();
+  }
+
+  if (!funeral) {
+    console.log("No funeral found with ID:", params.id);
+    notFound();
+  }
+
+  // Transform the flat data structure from Supabase to the nested structure expected by the component
+  const funeralData = {
+    id: funeral.id,
+    deceased: {
+      name: funeral.deceased_name,
+      photo: funeral.image_url || "/funeral1.jpg",
+      dob: funeral.date_of_birth,
+      dod: funeral.date_of_death,
+      life_story: funeral.life_story || "",
+    },
+    funeral: {
+      date: funeral.funeral_date,
+      time: funeral.funeral_time, // Assuming you have a funeral_time column
+      venue: funeral.venue, // Assuming you have a venue column
+      region: funeral.region, // Assuming you have a region column
+      location: funeral.funeral_location,
+      coordinates: funeral.coordinates as { lat: number; lng: number } || { lat: 0, lng: 0 },
+    },
+    organized_by: funeral.organized_by || "Family",
+    poster: funeral.poster_url || "",
+    brochure_url: funeral.brochure_url || "",
+    livestream_url: funeral.livestream_url || null,
+    isUpcoming: new Date(funeral.funeral_date) > new Date(),
+    // These are not in the single funeral fetch, so we provide default/empty values.
+    // You would need to fetch these separately if needed.
+    condolences: [], 
+    donations: { total: 0, currency: 'USD', supporters: 0, recent: [] },
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <Header />
       <main className="pt-20">
-        <FuneralEventPage funeral={sampleFuneral} />
+        <FuneralEventPage funeral={funeralData} />
       </main>
       <Footer />
     </div>
-  )
+  );
 }

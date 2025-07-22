@@ -38,30 +38,18 @@ export interface Database {
       funerals: {
         Row: {
           id: string
-          organizer_id: string
+          user_id: string
           deceased_name: string
-          deceased_photo_url: string | null
           date_of_birth: string
           date_of_death: string
-          biography: string | null
           funeral_date: string
-          funeral_time: string
-          venue: string
-          region: string
-          location: string
-          coordinates: Json | null
-          family_name: string
-          family_contact: string | null
-          family_details: string | null
-          poster_url: string | null
-          brochure_url: string | null
+          funeral_location: string
+          life_story: string | null
+          image_url: string | null
+          organized_by: string | null
           livestream_url: string | null
-          gallery_urls: string[] | null
-          status: "draft" | "pending" | "approved" | "rejected" | "completed"
-          is_featured: boolean
-          views_count: number
+          brochure_url: string | null
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string

@@ -1,38 +1,48 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Clock, Share2, Heart, Eye, MessageCircle, DollarSign, Play } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { motion } from "framer-motion"
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  Share2,
+  Heart,
+  Eye,
+  MessageCircle,
+  DollarSign,
+  Play,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { motion } from "framer-motion";
 
 interface FuneralCardProps {
   funeral: {
-    id: string
+    id: string;
     deceased: {
-      name: string
-      photo: string
-      dob: string
-      dod: string
-      biography: string
-    }
+      name: string;
+      photo: string;
+      dob: string;
+      dod: string;
+      biography: string;
+    };
     funeral: {
-      date: string
-      time: string
-      venue: string
-      region: string
-      location: string
-    }
-    family: string
-    poster: string
-    livestream: string | null
-    isUpcoming: boolean
-    condolences: number
-    donations: number
-    views: number
-  }
+      date: string;
+      time: string;
+      venue: string;
+      region: string;
+      location: string;
+    };
+    family: string;
+    poster: string;
+    livestream: string | null;
+    isUpcoming: boolean;
+    condolences: number;
+    donations: number;
+    views: number;
+  };
 }
 
 export function FuneralCard({ funeral }: FuneralCardProps) {
@@ -41,38 +51,41 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
       weekday: "short",
       month: "short",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   const calculateAge = (dob: string, dod: string) => {
-    const birth = new Date(dob)
-    const death = new Date(dod)
-    return death.getFullYear() - birth.getFullYear()
-  }
+    const birth = new Date(dob);
+    const death = new Date(dod);
+    return death.getFullYear() - birth.getFullYear();
+  };
 
   const handleShare = () => {
-    const shareUrl = `${window.location.origin}/funeral/${funeral.id}`
-    const shareText = `Join us in honoring the memory of ${funeral.deceased.name}`
+    const shareUrl = `${window.location.origin}/funeral/${funeral.id}`;
+    const shareText = `Join us in honoring the memory of ${funeral.deceased.name}`;
 
     if (navigator.share) {
       navigator.share({
         title: `Memorial for ${funeral.deceased.name}`,
         text: shareText,
         url: shareUrl,
-      })
+      });
     } else {
-      navigator.clipboard.writeText(shareUrl)
+      navigator.clipboard.writeText(shareUrl);
       // You could show a toast notification here
     }
-  }
+  };
 
   return (
-    <motion.div whileHover={{ y: -8, scale: 1.02 }} transition={{ duration: 0.3 }}>
+    <motion.div
+      whileHover={{ y: -8, scale: 1.02 }}
+      transition={{ duration: 0.3 }}
+    >
       <Card className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/90 backdrop-blur-sm">
         {/* Header Image */}
         <div className="relative overflow-hidden">
           <Image
-            src={funeral.poster || "/placeholder.svg?height=240&width=400"}
+            src={funeral.poster || "/funeral2.jpg"}
             alt={`${funeral.deceased.name} funeral poster`}
             width={400}
             height={240}
@@ -120,7 +133,7 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
           <div className="flex items-start space-x-4 mb-6">
             <div className="relative flex-shrink-0">
               <Image
-                src={funeral.deceased.photo || "/placeholder.svg?height=56&width=56"}
+                src={funeral.deceased.photo || "/funeral1.jpg"}
                 alt={funeral.deceased.name}
                 width={56}
                 height={56}
@@ -132,19 +145,27 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-bold text-slate-900 mb-1 truncate">{funeral.deceased.name}</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-1 truncate">
+                {funeral.deceased.name}
+              </h3>
               <p className="text-slate-600 text-sm mb-1">
-                {new Date(funeral.deceased.dob).getFullYear()} - {new Date(funeral.deceased.dod).getFullYear()}
+                {new Date(funeral.deceased.dob).getFullYear()} -{" "}
+                {new Date(funeral.deceased.dod).getFullYear()}
                 <span className="ml-2 text-amber-600 font-medium">
-                  ({calculateAge(funeral.deceased.dob, funeral.deceased.dod)} years)
+                  ({calculateAge(funeral.deceased.dob, funeral.deceased.dod)}{" "}
+                  years)
                 </span>
               </p>
-              <p className="text-slate-500 text-sm font-medium">{funeral.family}</p>
+              <p className="text-slate-500 text-sm font-medium">
+                {funeral.family}
+              </p>
             </div>
           </div>
 
           {/* Biography */}
-          <p className="text-slate-600 text-sm mb-6 line-clamp-2 leading-relaxed">{funeral.deceased.biography}</p>
+          <p className="text-slate-600 text-sm mb-6 line-clamp-2 leading-relaxed">
+            {funeral.deceased.biography}
+          </p>
 
           {/* Event Details */}
           <div className="space-y-3 mb-6">
@@ -153,8 +174,12 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
                 <Calendar className="w-4 h-4 text-amber-600" />
               </div>
               <div>
-                <span className="font-medium">{formatDate(funeral.funeral.date)}</span>
-                <span className="text-slate-500 ml-2">at {funeral.funeral.time}</span>
+                <span className="font-medium">
+                  {formatDate(funeral.funeral.date)}
+                </span>
+                <span className="text-slate-500 ml-2">
+                  at {funeral.funeral.time}
+                </span>
               </div>
             </div>
 
@@ -164,7 +189,9 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
               </div>
               <div className="min-w-0">
                 <p className="font-medium truncate">{funeral.funeral.venue}</p>
-                <p className="text-slate-500 truncate">{funeral.funeral.location}</p>
+                <p className="text-slate-500 truncate">
+                  {funeral.funeral.location}
+                </p>
               </div>
             </div>
           </div>
@@ -174,7 +201,9 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">
                 <Eye className="w-4 h-4 text-slate-500 mr-1" />
-                <span className="text-sm font-bold text-slate-800">{funeral.views}</span>
+                <span className="text-sm font-bold text-slate-800">
+                  {funeral.views}
+                </span>
               </div>
               <p className="text-xs text-slate-500">Views</p>
             </div>
@@ -182,7 +211,9 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">
                 <MessageCircle className="w-4 h-4 text-slate-500 mr-1" />
-                <span className="text-sm font-bold text-slate-800">{funeral.condolences}</span>
+                <span className="text-sm font-bold text-slate-800">
+                  {funeral.condolences}
+                </span>
               </div>
               <p className="text-xs text-slate-500">Messages</p>
             </div>
@@ -190,7 +221,9 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">
                 <DollarSign className="w-4 h-4 text-slate-500 mr-1" />
-                <span className="text-sm font-bold text-green-600">₵{funeral.donations.toLocaleString()}</span>
+                <span className="text-sm font-bold text-green-600">
+                  ₵{funeral.donations.toLocaleString()}
+                </span>
               </div>
               <p className="text-xs text-slate-500">Raised</p>
             </div>
@@ -217,5 +250,5 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
         </CardContent>
       </Card>
     </motion.div>
-  )
+  );
 }

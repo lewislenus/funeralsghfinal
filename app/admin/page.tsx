@@ -1,13 +1,16 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { funeralsAPI } from "@/lib/api/funerals";
+import { toast } from "@/components/ui/use-toast";
 import {
   Shield,
   Users,
@@ -23,72 +26,200 @@ import {
   TrendingUp,
   Clock,
   BarChart3,
-} from "lucide-react"
-import { motion } from "framer-motion"
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-// Sample admin data
-const adminData = {
-  stats: {
-    totalUsers: 1250,
-    pendingFunerals: 8,
-    totalFunerals: 156,
-    flaggedContent: 3,
-    totalDonations: 125000,
-    monthlyGrowth: 18.5,
-  },
-  pendingFunerals: [
-    {
-      id: "1",
-      deceased: "Ama Osei",
-      organizer: "Kofi Osei",
-      date: "2024-02-15",
-      status: "pending",
-      submittedAt: "2024-01-10T10:30:00Z",
-    },
-    {
-      id: "2",
-      deceased: "Yaw Mensah",
-      organizer: "Akosua Mensah",
-      date: "2024-02-20",
-      status: "pending",
-      submittedAt: "2024-01-11T14:20:00Z",
-    },
-  ],
-  flaggedContent: [
-    {
-      id: "1",
-      type: "condolence",
-      content: "Inappropriate message content...",
-      reporter: "Anonymous",
-      funeral: "Kwame Asante",
-      reportedAt: "2024-01-12T09:15:00Z",
-    },
-  ],
-  recentActivity: [
-    { type: "approval", message: "Funeral for Akua Boateng approved", time: "1 hour ago" },
-    { type: "flag", message: "Content flagged for review", time: "3 hours ago" },
-    { type: "user", message: "New user registration: John Doe", time: "5 hours ago" },
-  ],
-}
+type PendingFuneral = {
+  id: string;
+  user_id: string;
+  deceased_name: string;
+  created_at: string;
+  donations_total: number;
+  donations_count: number;
+  organizer: string;
+  funeral_date?: string;
+  status: string;
+};
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("overview")
-  const [searchQuery, setSearchQuery] = useState("")
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "Date not set";
+    }
+  };
 
-  const handleApproveFuneral = (id: string) => {
-    console.log("Approving funeral:", id)
-    // Implementation would go here
-  }
+  const [activeTab, setActiveTab] = useState("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pendingFunerals, setPendingFunerals] = useState<PendingFuneral[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalFunerals: 0,
+    flaggedContent: 0,
+    totalDonations: 0,
+    monthlyGrowth: 0,
+  });
+  const [flaggedContent, setFlaggedContent] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const router = useRouter();
 
-  const handleRejectFuneral = (id: string) => {
-    console.log("Rejecting funeral:", id)
-    // Implementation would go here
-  }
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || user.email !== "funeralsghana@gmail.com") {
+        router.push("/login");
+        return;
+      }
+    };
+    checkAdmin();
+  }, [router]);
 
-  const handleResolveFlag = (id: string) => {
-    console.log("Resolving flag:", id)
-    // Implementation would go here
-  }
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const supabase = createClient();
+
+      // Fetch all funerals with detailed information
+      const { data: funerals, error: funeralsError } = await supabase
+        .from("funerals")
+        .select(
+          "id, status, deceased_name, user_id, created_at, funeral_date, organizer_name, donations_total, donations (count)"
+        )
+        .order("created_at", { ascending: false });
+
+      const { data: users } = await supabase.from("profiles").select("id");
+      const { data: donations } = await supabase
+        .from("donations")
+        .select("amount");
+      const { data: flagged } = await supabase
+        .from("condolences")
+        .select("id, message, author_name, funeral_id, is_approved, created_at")
+        .eq("is_approved", false);
+
+      // Set funerals
+      if (funerals) {
+        const allFunerals = funerals.map((funeral) => ({
+          id: funeral.id,
+          user_id: funeral.user_id,
+          deceased_name: funeral.deceased_name,
+          created_at: funeral.created_at,
+          funeral_date: funeral.funeral_date,
+          organizer: funeral.organizer_name,
+          donations_total: funeral.donations_total || 0,
+          donations_count: funeral.donations?.[0]?.count || 0,
+          status: funeral.status,
+        }));
+        setPendingFunerals(allFunerals);
+        setPendingCount(
+          allFunerals.filter((f) => f.status === "pending").length
+        );
+      }
+
+      // Calculate stats
+      setStats({
+        totalUsers: users?.length || 0,
+        totalFunerals: funerals?.length || 0,
+        flaggedContent: flagged?.length || 0,
+        totalDonations:
+          donations?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0,
+        monthlyGrowth: 0,
+      });
+
+      setFlaggedContent(flagged || []);
+      setIsLoading(false);
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const handleApproveFuneral = async (id: string) => {
+    try {
+      const response = await fetch(`/api/funerals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+
+      if (!response.ok) {
+        throw await response.json();
+      }
+
+      toast({
+        title: "Success",
+        description: "Funeral approved successfully.",
+        variant: "default",
+      });
+
+      // Refresh the data
+      const supabase = createClient();
+      const { data: funerals } = await supabase
+        .from("funerals")
+        .select()
+        .order("created_at", { ascending: false });
+
+      if (funerals) {
+        setPendingFunerals(funerals);
+        setPendingCount(funerals.filter((f) => f.status === "pending").length);
+      }
+    } catch (error) {
+      console.error("Error approving funeral:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve funeral. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectFuneral = async (id: string) => {
+    try {
+      const response = await fetch(`/api/funerals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      });
+
+      if (!response.ok) {
+        throw await response.json();
+      }
+
+      toast({
+        title: "Success",
+        description: "Funeral rejected successfully.",
+        variant: "default",
+      });
+
+      // Refresh the data
+      const supabase = createClient();
+      const { data: funerals } = await supabase
+        .from("funerals")
+        .select()
+        .order("created_at", { ascending: false });
+
+      if (funerals) {
+        setPendingFunerals(funerals);
+        setPendingCount(funerals.filter((f) => f.status === "pending").length);
+      }
+    } catch (error) {
+      console.error("Error rejecting funeral:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reject funeral. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
@@ -110,23 +241,21 @@ export default function AdminDashboard() {
                   Admin Dashboard
                 </h1>
               </div>
-              <p className="text-xl text-slate-600">Monitor platform activity and manage content</p>
+              <p className="text-xl text-slate-600">
+                Monitor platform activity and manage content
+              </p>
             </div>
 
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
-                  placeholder="Search users, funerals..."
+                  placeholder="Search funerals..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2 rounded-xl border-slate-300 focus:border-amber-500 focus:ring-amber-500/20 w-64"
                 />
               </div>
-              <Button variant="outline" className="rounded-xl bg-white/80">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
             </div>
           </motion.div>
 
@@ -141,14 +270,12 @@ export default function AdminDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Total Users</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">
-                      {adminData.stats.totalUsers.toLocaleString()}
+                    <p className="text-sm text-slate-600 font-medium">
+                      Total Users
                     </p>
-                    <div className="flex items-center mt-2">
-                      <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                      <span className="text-sm text-green-600 font-medium">+{adminData.stats.monthlyGrowth}%</span>
-                    </div>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {stats.totalUsers.toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
                     <Users className="w-6 h-6 text-blue-600" />
@@ -161,11 +288,17 @@ export default function AdminDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Pending Reviews</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{adminData.stats.pendingFunerals}</p>
+                    <p className="text-sm text-slate-600 font-medium">
+                      Pending Reviews
+                    </p>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {pendingCount}
+                    </p>
                     <div className="flex items-center mt-2">
                       <Clock className="w-4 h-4 text-amber-500 mr-1" />
-                      <span className="text-sm text-slate-600">Awaiting approval</span>
+                      <span className="text-sm text-slate-600">
+                        Awaiting approval
+                      </span>
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
@@ -179,12 +312,12 @@ export default function AdminDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Flagged Content</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{adminData.stats.flaggedContent}</p>
-                    <div className="flex items-center mt-2">
-                      <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
-                      <span className="text-sm text-slate-600">Needs attention</span>
-                    </div>
+                    <p className="text-sm text-slate-600 font-medium">
+                      Total Funerals
+                    </p>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {stats.totalFunerals.toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
                     <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -197,14 +330,12 @@ export default function AdminDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Total Donations</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">
-                      ₵{adminData.stats.totalDonations.toLocaleString()}
+                    <p className="text-sm text-slate-600 font-medium">
+                      Total Donations
                     </p>
-                    <div className="flex items-center mt-2">
-                      <DollarSign className="w-4 h-4 text-green-500 mr-1" />
-                      <span className="text-sm text-slate-600">Platform total</span>
-                    </div>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      ₵{stats.totalDonations.toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center">
                     <DollarSign className="w-6 h-6 text-green-600" />
@@ -214,283 +345,140 @@ export default function AdminDashboard() {
             </Card>
           </motion.div>
 
-          {/* Main Content Tabs */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur-sm shadow-lg rounded-2xl p-2">
-                <TabsTrigger
-                  value="overview"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white font-medium"
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="funerals"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white font-medium"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Funerals
-                </TabsTrigger>
-                <TabsTrigger
-                  value="users"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white font-medium"
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Users
-                </TabsTrigger>
-                <TabsTrigger
-                  value="content"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white font-medium"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Content
-                </TabsTrigger>
-                <TabsTrigger
-                  value="donations"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white font-medium"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Donations
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-8">
-                <div className="grid lg:grid-cols-3 gap-8">
-                  {/* Recent Activity */}
-                  <div className="lg:col-span-2">
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="flex items-center text-xl">
-                          <Clock className="w-5 h-5 mr-2 text-red-600" />
-                          Recent Activity
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {adminData.recentActivity.map((activity, index) => (
-                            <div key={index} className="flex items-start space-x-4 p-4 bg-slate-50 rounded-xl">
-                              <div
-                                className={`w-2 h-2 rounded-full mt-2 ${
-                                  activity.type === "approval"
-                                    ? "bg-green-500"
-                                    : activity.type === "flag"
-                                      ? "bg-red-500"
-                                      : "bg-blue-500"
-                                }`}
-                              />
-                              <div className="flex-1">
-                                <p className="text-slate-800 font-medium">{activity.message}</p>
-                                <p className="text-sm text-slate-500">{activity.time}</p>
-                              </div>
+          {/* Funerals List */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-6"
+          >
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-2xl">All Funerals</CardTitle>
+                <p className="text-slate-600">
+                  View and manage all funeral listings
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500" />
+                    </div>
+                  ) : pendingFunerals.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                      <h3 className="text-xl font-medium text-slate-600">
+                        No funerals found
+                      </h3>
+                      <p className="text-slate-500 mt-2">
+                        No funeral listings have been created yet.
+                      </p>
+                    </div>
+                  ) : (
+                    pendingFunerals.map((funeral) => (
+                      <motion.div
+                        key={funeral.id}
+                        whileHover={{ scale: 1.02 }}
+                        className="flex items-center justify-between p-6 border border-slate-200 rounded-2xl bg-white/50 hover:bg-white/80 transition-all duration-300"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h3 className="text-xl font-bold text-slate-800">
+                              {funeral.deceased_name}
+                            </h3>
+                            <Badge
+                              className={`rounded-full ${
+                                funeral.status === "approved"
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : funeral.status === "pending"
+                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                  : "bg-red-100 text-red-800 hover:bg-red-200"
+                              }`}
+                            >
+                              {funeral.status.charAt(0).toUpperCase() +
+                                funeral.status.slice(1)}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <p className="text-sm text-slate-500">
+                                Organized by
+                              </p>
+                              <p className="text-slate-800">
+                                {funeral.organizer || "Not specified"}
+                              </p>
                             </div>
-                          ))}
+                            <div>
+                              <p className="text-sm text-slate-500">
+                                Funeral Date
+                              </p>
+                              <p className="text-slate-800">
+                                {formatDate(funeral.funeral_date || "")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-slate-500">
+                                Donations
+                              </p>
+                              <p className="text-slate-800">
+                                ₵
+                                {(
+                                  funeral.donations_total || 0
+                                ).toLocaleString()}{" "}
+                                ({funeral.donations_count || 0} donations)
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-slate-500">Created</p>
+                              <p className="text-slate-800">
+                                {formatDate(funeral.created_at)}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div>
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="text-xl">Quick Actions</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Button className="w-full justify-start bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl">
-                          <AlertTriangle className="w-4 h-4 mr-2" />
-                          Review Flagged Content
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start rounded-xl bg-transparent">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Approve Funerals
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start rounded-xl bg-transparent">
-                          <Users className="w-4 h-4 mr-2" />
-                          Manage Users
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start rounded-xl bg-transparent">
-                          <BarChart3 className="w-4 h-4 mr-2" />
-                          View Reports
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
+                        <div className="flex space-x-4">
+                          {funeral.status === "pending" && (
+                            <>
+                              <Button
+                                onClick={() => handleApproveFuneral(funeral.id)}
+                                variant="default"
+                                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approve
+                              </Button>
+                              <Button
+                                onClick={() => handleRejectFuneral(funeral.id)}
+                                variant="outline"
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            onClick={() =>
+                              router.push(`/funeral/${funeral.id}`)
+                            }
+                            variant="outline"
+                            className="border-slate-200 text-slate-600 hover:bg-slate-50"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
-              </TabsContent>
-
-              <TabsContent value="funerals">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Pending Funeral Approvals</CardTitle>
-                    <p className="text-slate-600">Review and approve funeral listings</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {adminData.pendingFunerals.map((funeral) => (
-                        <motion.div
-                          key={funeral.id}
-                          whileHover={{ scale: 1.02 }}
-                          className="flex items-center justify-between p-6 border border-slate-200 rounded-2xl bg-white/50 hover:bg-white/80 transition-all duration-300"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="text-xl font-bold text-slate-800">{funeral.deceased}</h3>
-                              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-full">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Pending Review
-                              </Badge>
-                            </div>
-                            <p className="text-slate-600 mb-2">
-                              Organizer: <span className="font-medium">{funeral.organizer}</span>
-                            </p>
-                            <p className="text-slate-600 mb-2">
-                              Funeral Date:{" "}
-                              {new Date(funeral.date).toLocaleDateString("en-GB", {
-                                weekday: "long",
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              Submitted: {new Date(funeral.submittedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center space-x-3">
-                            <Button variant="outline" size="sm" className="rounded-xl bg-transparent">
-                              <Eye className="w-4 h-4 mr-2" />
-                              Review
-                            </Button>
-                            <Button
-                              onClick={() => handleApproveFuneral(funeral.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
-                              size="sm"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
-                            </Button>
-                            <Button
-                              onClick={() => handleRejectFuneral(funeral.id)}
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl bg-transparent"
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Reject
-                            </Button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="users">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">User Management</CardTitle>
-                    <p className="text-slate-600">Monitor and manage platform users</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-gradient-to-br from-slate-100 to-slate-200 p-12 rounded-2xl text-center">
-                      <Users className="w-16 h-16 text-slate-400 mx-auto mb-6" />
-                      <h3 className="text-2xl font-semibold mb-4">User Management Dashboard</h3>
-                      <p className="text-slate-600 text-lg">
-                        Comprehensive user management tools including user profiles, activity monitoring, and account
-                        management would be implemented here.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="content">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Flagged Content Review</CardTitle>
-                    <p className="text-slate-600">Review and moderate reported content</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {adminData.flaggedContent.map((flag) => (
-                        <motion.div
-                          key={flag.id}
-                          whileHover={{ scale: 1.02 }}
-                          className="flex items-start justify-between p-6 border border-red-200 rounded-2xl bg-red-50/50 hover:bg-red-50/80 transition-all duration-300"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <Badge className="bg-red-100 text-red-800 hover:bg-red-200 rounded-full">
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                {flag.type}
-                              </Badge>
-                              <span className="text-slate-600">on {flag.funeral}</span>
-                            </div>
-                            <p className="text-slate-800 mb-3 font-medium">{flag.content}</p>
-                            <div className="text-sm text-slate-600">
-                              <p>Reported by: {flag.reporter}</p>
-                              <p>Date: {new Date(flag.reportedAt).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center space-x-3">
-                            <Button variant="outline" size="sm" className="rounded-xl bg-white">
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Full
-                            </Button>
-                            <Button
-                              onClick={() => handleResolveFlag(flag.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
-                              size="sm"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Resolve
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl bg-white"
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Remove
-                            </Button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="donations">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Donations Dashboard</CardTitle>
-                    <p className="text-slate-600">Monitor platform donation activity</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-12 rounded-2xl text-center">
-                      <DollarSign className="w-16 h-16 text-green-500 mx-auto mb-6" />
-                      <h3 className="text-2xl font-semibold mb-4">Donations Analytics</h3>
-                      <div className="text-4xl font-bold text-green-600 mb-4">
-                        ₵{adminData.stats.totalDonations.toLocaleString()}
-                      </div>
-                      <p className="text-slate-600 text-lg">
-                        Detailed donation analytics, transaction monitoring, and financial reporting tools would be
-                        implemented here.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
       </main>
       <Footer />
     </div>
-  )
+  );
 }

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { FuneralCard } from "./funeral-card"
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
-import { motion } from "framer-motion"
-import Link from "next/link"
+import { useState } from "react";
+import { FuneralCard } from "./funeral-card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import Link from "next/link";
 
 // Sample funeral data for homepage preview
 const sampleFunerals = [
@@ -13,10 +13,11 @@ const sampleFunerals = [
     id: "1",
     deceased: {
       name: "Kwame Asante",
-      photo: "/placeholder.svg?height=200&width=200",
+      photo: "/funeral1.jpg",
       dob: "1945-03-15",
       dod: "2024-01-10",
-      biography: "A beloved teacher and community leader who dedicated his life to education in Kumasi.",
+      biography:
+        "A beloved teacher and community leader who dedicated his life to education in Kumasi.",
     },
     funeral: {
       date: "2024-01-20",
@@ -26,7 +27,7 @@ const sampleFunerals = [
       location: "Kumasi, Ghana",
     },
     family: "Asante Family",
-    poster: "/placeholder.svg?height=400&width=300",
+    poster: "/funeral2.jpg",
     livestream: "https://youtube.com/watch?v=example",
     isUpcoming: true,
     condolences: 23,
@@ -37,10 +38,11 @@ const sampleFunerals = [
     id: "2",
     deceased: {
       name: "Akosua Mensah",
-      photo: "/placeholder.svg?height=200&width=200",
+      photo: "/funeral3.jpg",
       dob: "1960-07-22",
       dod: "2024-01-08",
-      biography: "A successful businesswoman and mother who touched many lives in Accra.",
+      biography:
+        "A successful businesswoman and mother who touched many lives in Accra.",
     },
     funeral: {
       date: "2024-01-18",
@@ -50,7 +52,7 @@ const sampleFunerals = [
       location: "Accra, Ghana",
     },
     family: "Mensah Family",
-    poster: "/placeholder.svg?height=400&width=300",
+    poster: "/funeral4.jpg",
     livestream: "https://facebook.com/watch?v=example",
     isUpcoming: true,
     condolences: 18,
@@ -61,10 +63,11 @@ const sampleFunerals = [
     id: "3",
     deceased: {
       name: "Kofi Boateng",
-      photo: "/placeholder.svg?height=200&width=200",
+      photo: "/funeral5.jpg",
       dob: "1938-11-05",
       dod: "2024-01-05",
-      biography: "A respected elder and traditional leader from the Northern Region.",
+      biography:
+        "A respected elder and traditional leader from the Northern Region.",
     },
     funeral: {
       date: "2024-01-15",
@@ -74,17 +77,17 @@ const sampleFunerals = [
       location: "Tamale, Ghana",
     },
     family: "Boateng Family",
-    poster: "/placeholder.svg?height=400&width=300",
+    poster: "/funeral1.jpg",
     livestream: null,
     isUpcoming: false,
     condolences: 15,
     donations: 2800,
     views: 156,
   },
-]
+];
 
 export function FuneralDirectory() {
-  const [funerals] = useState(sampleFunerals)
+  const [funerals] = useState(sampleFunerals);
 
   return (
     <section className="py-20 bg-gradient-to-br from-white to-slate-50">
@@ -97,9 +100,12 @@ export function FuneralDirectory() {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">Recent Funeral Services</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
+            Recent Funeral Services
+          </h2>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-            Browse and connect with funeral services across Ghana. Leave condolences, share memories, and show support.
+            Browse and connect with funeral services across Ghana. Leave
+            condolences, share memories, and show support.
           </p>
 
           <Button
@@ -137,9 +143,12 @@ export function FuneralDirectory() {
           className="text-center mt-16"
         >
           <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-12 text-white">
-            <h3 className="text-2xl md:text-3xl font-bold mb-4">Need to Create a Memorial?</h3>
+            <h3 className="text-2xl md:text-3xl font-bold mb-4">
+              Need to Create a Memorial?
+            </h3>
             <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-              Honor your loved one with a beautiful, dignified memorial page that brings family and friends together.
+              Honor your loved one with a beautiful, dignified memorial page
+              that brings family and friends together.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -162,5 +171,5 @@ export function FuneralDirectory() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }

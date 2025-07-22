@@ -1,12 +1,14 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import {
   Plus,
   Eye,
@@ -24,68 +26,122 @@ import {
   Heart,
   Clock,
   CheckCircle,
-} from "lucide-react"
-import Link from "next/link"
-import { motion } from "framer-motion"
+} from "lucide-react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 
-// Sample organiser data
-const sampleData = {
-  funerals: [
-    {
-      id: "1",
-      deceased: "Kwame Asante",
-      date: "2024-01-20",
-      status: "upcoming",
-      views: 245,
-      condolences: 12,
-      donations: 5420,
-      image: "/placeholder.svg?height=60&width=60",
-    },
-    {
-      id: "2",
-      deceased: "Akosua Mensah",
-      date: "2024-01-18",
-      status: "upcoming",
-      views: 189,
-      condolences: 8,
-      donations: 3200,
-      image: "/placeholder.svg?height=60&width=60",
-    },
-    {
-      id: "3",
-      deceased: "Kofi Boateng",
-      date: "2024-01-15",
-      status: "completed",
-      views: 156,
-      condolences: 15,
-      donations: 2800,
-      image: "/placeholder.svg?height=60&width=60",
-    },
-  ],
-  stats: {
-    totalFunerals: 3,
-    totalViews: 590,
-    totalCondolences: 35,
-    totalDonations: 11420,
-    monthlyGrowth: 12.5,
-  },
-  recentActivity: [
-    { type: "condolence", message: "New condolence from Ama Osei", time: "2 hours ago" },
-    { type: "donation", message: "₵200 donation received", time: "4 hours ago" },
-    { type: "view", message: "50 new views on Kwame Asante's page", time: "6 hours ago" },
-  ],
-}
+// Define types for our data
+type Funeral = {
+  id: string;
+  deceased_name: string;
+  funeral_date: string;
+  image_url: string | null;
+  created_at: string;
+  status: 'pending' | 'approved' | 'rejected' | null;
+};
+
+type Stats = {
+  totalFunerals: number;
+  totalViews: number; // Placeholder
+  totalCondolences: number; // Placeholder
+  totalDonations: number; // Placeholder
+  monthlyGrowth: number; // Placeholder
+};
+
+type UserProfile = {
+  full_name: string;
+  // Add other profile fields
+};
 
 export default function DashboardPage() {
-  const [funerals] = useState(sampleData.funerals)
-  const [stats] = useState(sampleData.stats)
-  const [activeTab, setActiveTab] = useState("overview")
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [funerals, setFunerals] = useState<Funeral[]>([]);
+  const [stats, setStats] = useState<Stats>({ totalFunerals: 0, totalViews: 0, totalCondolences: 0, totalDonations: 0, monthlyGrowth: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check for success message in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const message = urlParams.get('message');
+    
+    if (status === 'success' && message) {
+      setSuccessMessage(decodeURIComponent(message));
+      
+      // Clear the URL parameters after reading them
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+    
+    const fetchData = async () => {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (!authUser) {
+        router.push('/login');
+        return;
+      }
+
+      // Fetch user profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', authUser.id)
+        .single();
+      setUser(profileData);
+
+      // Fetch funerals for the user
+      const { data: funeralsData, error } = await supabase
+        .from('funerals')
+        .select('*')
+        .eq('user_id', authUser.id);
+
+      if (funeralsData) {
+        setFunerals(funeralsData);
+        // Basic stats calculation (can be expanded)
+        setStats({
+          totalFunerals: funeralsData.length,
+          totalViews: 0, // Replace with actual data later
+          totalCondolences: 0, // Replace with actual data later
+          totalDonations: 0, // Replace with actual data later
+          monthlyGrowth: 0, // Replace with actual data later
+        });
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <Header />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
+          {/* Success Message */}
+          {successMessage && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 bg-green-100 border border-green-200 text-green-800 rounded-xl flex items-center justify-between"
+            >
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 mr-3 text-green-600" />
+                <p>{successMessage}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSuccessMessage(null)}
+                className="text-green-700 hover:bg-green-200"
+              >
+                ×
+              </Button>
+            </motion.div>
+          )}
           {/* Header Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -94,13 +150,19 @@ export default function DashboardPage() {
           >
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
-                Welcome back, John
+                Welcome back, {user?.full_name || 'User'}
               </h1>
-              <p className="text-xl text-slate-600">Manage your funeral listings and connect with your community</p>
+              <p className="text-xl text-slate-600">
+                Manage your funeral listings and connect with your community
+              </p>
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" className="rounded-xl bg-white/80">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl bg-white/80"
+              >
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
               </Button>
@@ -127,11 +189,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Total Funerals</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{stats.totalFunerals}</p>
+                    <p className="text-sm text-slate-600 font-medium">
+                      Total Funerals
+                    </p>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {isLoading ? '...' : stats.totalFunerals}
+                    </p>
                     <div className="flex items-center mt-2">
                       <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                      <span className="text-sm text-green-600 font-medium">+{stats.monthlyGrowth}%</span>
+                      <span className="text-sm text-green-600 font-medium">
+                        +{stats.monthlyGrowth}%
+                      </span>
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
@@ -145,8 +213,12 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Total Views</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{stats.totalViews.toLocaleString()}</p>
+                    <p className="text-sm text-slate-600 font-medium">
+                      Total Views
+                    </p>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {isLoading ? '...' : stats.totalViews.toLocaleString()}
+                    </p>
                     <div className="flex items-center mt-2">
                       <Eye className="w-4 h-4 text-blue-500 mr-1" />
                       <span className="text-sm text-slate-600">This month</span>
@@ -163,11 +235,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Condolences</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{stats.totalCondolences}</p>
+                    <p className="text-sm text-slate-600 font-medium">
+                      Condolences
+                    </p>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {isLoading ? '...' : stats.totalCondolences}
+                    </p>
                     <div className="flex items-center mt-2">
                       <Heart className="w-4 h-4 text-purple-500 mr-1" />
-                      <span className="text-sm text-slate-600">Messages received</span>
+                      <span className="text-sm text-slate-600">
+                        Messages received
+                      </span>
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center">
@@ -181,11 +259,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium">Donations (GHS)</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">₵{stats.totalDonations.toLocaleString()}</p>
+                    <p className="text-sm text-slate-600 font-medium">
+                      Donations (GHS)
+                    </p>
+                    <p className="text-3xl font-bold text-slate-800 mt-1">
+                      {isLoading ? "..." : stats.totalDonations.toLocaleString()}
+                    </p>
                     <div className="flex items-center mt-2">
                       <DollarSign className="w-4 h-4 text-amber-500 mr-1" />
-                      <span className="text-sm text-slate-600">Total raised</span>
+                      <span className="text-sm text-slate-600">
+                        Total raised
+                      </span>
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
@@ -197,289 +281,106 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* Main Content Tabs */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm shadow-lg rounded-2xl p-2">
-                <TabsTrigger
-                  value="overview"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white font-medium"
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Overview
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-slate-200/80 rounded-xl mb-8">
+                <TabsTrigger value="all" className="rounded-lg">
+                  All Funerals
                 </TabsTrigger>
-                <TabsTrigger
-                  value="funerals"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white font-medium"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  My Funerals
-                </TabsTrigger>
-                <TabsTrigger
-                  value="analytics"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white font-medium"
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Analytics
-                </TabsTrigger>
-                <TabsTrigger
-                  value="settings"
-                  className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white font-medium"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                <TabsTrigger value="drafts" className="rounded-lg">
+                  Drafts
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="space-y-8">
-                <div className="grid lg:grid-cols-3 gap-8">
-                  {/* Recent Activity */}
-                  <div className="lg:col-span-2">
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="flex items-center text-xl">
-                          <Clock className="w-5 h-5 mr-2 text-amber-600" />
-                          Recent Activity
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {sampleData.recentActivity.map((activity, index) => (
-                            <div key={index} className="flex items-start space-x-4 p-4 bg-slate-50 rounded-xl">
-                              <div
-                                className={`w-2 h-2 rounded-full mt-2 ${
-                                  activity.type === "condolence"
-                                    ? "bg-purple-500"
-                                    : activity.type === "donation"
-                                      ? "bg-green-500"
-                                      : "bg-blue-500"
-                                }`}
-                              />
-                              <div className="flex-1">
-                                <p className="text-slate-800 font-medium">{activity.message}</p>
-                                <p className="text-sm text-slate-500">{activity.time}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+              <TabsContent value="all">
+                {isLoading ? (
+                  <div className="text-center py-16">Loading your funerals...</div>
+                ) : funerals.length === 0 ? (
+                  <div className="text-center py-16">
+                    <p className="text-slate-600 mb-4">
+                      You haven't created any funerals yet.
+                    </p>
+                    <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl">
+                      <Link href="/create-funeral">Create Your First Funeral</Link>
+                    </Button>
                   </div>
-
-                  {/* Quick Actions */}
-                  <div>
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="text-xl">Quick Actions</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Button
-                          asChild
-                          className="w-full justify-start bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-xl"
-                        >
-                          <Link href="/create-funeral">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create New Funeral
-                          </Link>
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start rounded-xl bg-transparent">
-                          <MessageCircle className="w-4 h-4 mr-2" />
-                          View Messages
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start rounded-xl bg-transparent">
-                          <BarChart3 className="w-4 h-4 mr-2" />
-                          View Analytics
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start rounded-xl bg-transparent">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Account Settings
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="funerals">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Your Funeral Listings</CardTitle>
-                    <p className="text-slate-600">Manage and monitor your funeral event pages</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {funerals.map((funeral) => (
-                        <motion.div
-                          key={funeral.id}
-                          whileHover={{ scale: 1.02 }}
-                          className="flex items-center justify-between p-6 border border-slate-200 rounded-2xl bg-white/50 hover:bg-white/80 transition-all duration-300"
-                        >
-                          <div className="flex items-center space-x-6">
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {funerals.map((funeral) => (
+                      <motion.div
+                        key={funeral.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <Card className="overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
+                          <div className="relative">
                             <img
-                              src={funeral.image || "/placeholder.svg"}
-                              alt={funeral.deceased}
-                              className="w-16 h-16 rounded-xl object-cover"
+                              src={funeral.image_url || "/placeholder.svg"}
+                              alt={funeral.deceased_name}
+                              className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                             />
-                            <div>
-                              <div className="flex items-center space-x-3 mb-2">
-                                <h3 className="text-xl font-bold text-slate-800">{funeral.deceased}</h3>
-                                <Badge
-                                  className={`${
-                                    funeral.status === "upcoming"
-                                      ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                      : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-                                  } rounded-full`}
-                                >
-                                  {funeral.status === "upcoming" ? (
-                                    <>
-                                      <Calendar className="w-3 h-3 mr-1" />
-                                      Upcoming
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle className="w-3 h-3 mr-1" />
-                                      Completed
-                                    </>
-                                  )}
-                                </Badge>
-                              </div>
-                              <p className="text-slate-600 mb-3">
-                                Funeral Date:{" "}
-                                {new Date(funeral.date).toLocaleDateString("en-GB", {
-                                  weekday: "long",
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric",
-                                })}
-                              </p>
-
-                              <div className="flex items-center space-x-8 text-sm text-slate-600">
-                                <span className="flex items-center">
-                                  <Eye className="w-4 h-4 mr-1 text-blue-500" />
-                                  {funeral.views} views
-                                </span>
-                                <span className="flex items-center">
-                                  <MessageCircle className="w-4 h-4 mr-1 text-purple-500" />
-                                  {funeral.condolences} condolences
-                                </span>
-                                <span className="flex items-center">
-                                  <DollarSign className="w-4 h-4 mr-1 text-green-500" />₵
-                                  {funeral.donations.toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
                           </div>
-
-                          <div className="flex items-center space-x-3">
-                            <Button asChild variant="outline" size="sm" className="rounded-xl bg-transparent">
-                              <Link href={`/funeral/${funeral.id}`}>
-                                <Eye className="w-4 h-4" />
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-lg font-bold">{funeral.deceased_name}</CardTitle>
+                                <CardDescription>Created on {new Date(funeral.created_at).toLocaleDateString()}</CardDescription>
+                              </div>
+                              <Badge 
+                                className={`${{
+                                  approved: 'bg-green-500',
+                                  pending: 'bg-yellow-500',
+                                  rejected: 'bg-red-500',
+                                }[funeral.status || 'pending']} text-white`}>
+                                {funeral.status ? funeral.status.charAt(0).toUpperCase() + funeral.status.slice(1) : 'Pending'}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center text-slate-600 text-sm mb-4">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              <span>{new Date(funeral.funeral_date).toDateString()}</span>
+                            </div>
+                          </CardContent>
+                          <CardFooter className="flex justify-between">
+                            <div className={funeral.status !== 'approved' ? 'cursor-not-allowed' : ''}>
+                              <Button asChild variant="ghost" disabled={funeral.status !== 'approved'} className="w-full justify-start">
+                                <Link href={`/funeral/${funeral.id}`}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
+                                </Link>
+                              </Button>
+                            </div>
+                            <Button asChild variant="outline">
+                              <Link href={`/edit-funeral/${funeral.id}`}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
                               </Link>
                             </Button>
-                            <Button variant="outline" size="sm" className="rounded-xl bg-transparent">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl bg-transparent"
-                            >
+                            <Button variant="destructive" size="icon">
                               <Trash2 className="w-4 h-4" />
                             </Button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
-              <TabsContent value="analytics">
-                <div className="grid lg:grid-cols-2 gap-8">
-                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-xl">Performance Overview</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-slate-100 to-slate-200 p-8 rounded-2xl text-center">
-                          <BarChart3 className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Detailed Analytics</h3>
-                          <p className="text-slate-600">
-                            Comprehensive analytics including visitor demographics, engagement metrics, and donation
-                            patterns would be displayed here.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-xl">Growth Metrics</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-8 rounded-2xl text-center">
-                          <TrendingUp className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Monthly Growth</h3>
-                          <p className="text-3xl font-bold text-green-600 mb-2">+{stats.monthlyGrowth}%</p>
-                          <p className="text-slate-600">Increase in engagement this month</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="settings">
-                <div className="grid lg:grid-cols-2 gap-8">
-                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-xl">Account Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-slate-100 to-slate-200 p-8 rounded-2xl text-center">
-                          <Settings className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Profile Management</h3>
-                          <p className="text-slate-600">
-                            Account management, notification preferences, and privacy settings would be available here.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-xl">Notification Preferences</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                          <div>
-                            <p className="font-medium text-slate-800">Email Notifications</p>
-                            <p className="text-sm text-slate-600">Receive updates via email</p>
-                          </div>
-                          <input type="checkbox" className="rounded border-slate-300 text-amber-600" defaultChecked />
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                          <div>
-                            <p className="font-medium text-slate-800">SMS Alerts</p>
-                            <p className="text-sm text-slate-600">Get important updates via SMS</p>
-                          </div>
-                          <input type="checkbox" className="rounded border-slate-300 text-amber-600" />
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                          <div>
-                            <p className="font-medium text-slate-800">Push Notifications</p>
-                            <p className="text-sm text-slate-600">Browser push notifications</p>
-                          </div>
-                          <input type="checkbox" className="rounded border-slate-300 text-amber-600" defaultChecked />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+              <TabsContent value="drafts">
+                <div className="text-center py-16">
+                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Drafts
+                  </h3>
+                  <p className="text-slate-600">
+                    You currently have no funerals saved as drafts.
+                  </p>
                 </div>
               </TabsContent>
             </Tabs>
@@ -488,5 +389,5 @@ export default function DashboardPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
