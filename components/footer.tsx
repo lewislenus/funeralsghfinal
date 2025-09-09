@@ -11,12 +11,12 @@ export function Footer() {
             <div className="flex items-center space-x-3 mb-6">
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-lg">FG</span>
+                  <span className="text-white font-bold text-lg">D</span>
                 </div>
                 <div className="absolute -inset-1 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl opacity-20"></div>
               </div>
               <div>
-                <span className="text-xl font-bold">FuneralsGhana</span>
+                <span className="text-xl font-bold">damarifadue</span>
                 <p className="text-xs text-slate-400 -mt-1">Honoring Lives</p>
               </div>
             </div>
@@ -117,7 +117,7 @@ export function Footer() {
         {/* Bottom Section */}
         <div className="border-t border-slate-700 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-slate-400 text-sm mb-4 md:mb-0">&copy; 2024 FuneralsGhana. All rights reserved.</p>
+            <p className="text-slate-400 text-sm mb-4 md:mb-0">&copy; 2024 damarifadue. All rights reserved.</p>
 
             <div className="flex items-center space-x-6">
               <span className="text-slate-400 text-sm">Available in:</span>

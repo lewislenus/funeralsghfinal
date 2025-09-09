@@ -1,212 +1,213 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json = 
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string
-          email: string
-          full_name: string | null
-          phone: string | null
-          role: "user" | "organizer" | "admin"
-          avatar_url: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          email: string
-          full_name?: string | null
-          phone?: string | null
-          role?: "user" | "organizer" | "admin"
-          avatar_url?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          full_name?: string | null
-          phone?: string | null
-          role?: "user" | "organizer" | "admin"
-          avatar_url?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
       funerals: {
         Row: {
           id: string
-          user_id: string
+          created_at: string | null
+          user_id: string | null
+          organizer_id: string | null
           deceased_name: string
-          date_of_birth: string
-          date_of_death: string
-          funeral_date: string
-          funeral_location: string
+          date_of_birth: string | null
+          date_of_death: string | null
+          funeral_date: string | null
+          funeral_time: string | null
+          funeral_location: string | null
+          venue: string | null
+          region: string | null
+          location: string | null
+          family_name: string | null
+          family_contact: string | null
+          poster_url: string | null
+          gallery_urls: string[] | null
           life_story: string | null
           image_url: string | null
+          is_public: boolean | null
           organized_by: string | null
           livestream_url: string | null
           brochure_url: string | null
-          created_at: string
+          status: string | null
+          featured: boolean | null
+          views_count: number | null
+          deceased_photo_url: string | null
+          biography: string | null
         }
         Insert: {
           id?: string
-          organizer_id: string
+          created_at?: string | null
+          user_id?: string | null
+          organizer_id?: string | null
           deceased_name: string
-          deceased_photo_url?: string | null
-          date_of_birth: string
-          date_of_death: string
-          biography?: string | null
-          funeral_date: string
-          funeral_time: string
-          venue: string
-          region: string
-          location: string
-          coordinates?: Json | null
-          family_name: string
+          date_of_birth?: string | null
+          date_of_death?: string | null
+          funeral_date?: string | null
+          funeral_time?: string | null
+          funeral_location?: string | null
+          venue?: string | null
+          region?: string | null
+          location?: string | null
+          family_name?: string | null
           family_contact?: string | null
-          family_details?: string | null
           poster_url?: string | null
-          brochure_url?: string | null
-          livestream_url?: string | null
           gallery_urls?: string[] | null
-          status?: "draft" | "pending" | "approved" | "rejected" | "completed"
-          is_featured?: boolean
-          views_count?: number
-          created_at?: string
-          updated_at?: string
+          life_story?: string | null
+          image_url?: string | null
+          is_public?: boolean | null
+          organized_by?: string | null
+          livestream_url?: string | null
+          brochure_url?: string | null
+          status?: string | null
+          featured?: boolean | null
+          views_count?: number | null
+          deceased_photo_url?: string | null
+          biography?: string | null
         }
         Update: {
           id?: string
-          organizer_id?: string
+          created_at?: string | null
+          user_id?: string | null
+          organizer_id?: string | null
           deceased_name?: string
-          deceased_photo_url?: string | null
-          date_of_birth?: string
-          date_of_death?: string
-          biography?: string | null
-          funeral_date?: string
-          funeral_time?: string
-          venue?: string
-          region?: string
-          location?: string
-          coordinates?: Json | null
-          family_name?: string
+          date_of_birth?: string | null
+          date_of_death?: string | null
+          funeral_date?: string | null
+          funeral_time?: string | null
+          funeral_location?: string | null
+          venue?: string | null
+          region?: string | null
+          location?: string | null
+          family_name?: string | null
           family_contact?: string | null
-          family_details?: string | null
           poster_url?: string | null
-          brochure_url?: string | null
-          livestream_url?: string | null
           gallery_urls?: string[] | null
-          status?: "draft" | "pending" | "approved" | "rejected" | "completed"
-          is_featured?: boolean
-          views_count?: number
-          created_at?: string
-          updated_at?: string
+          life_story?: string | null
+          image_url?: string | null
+          is_public?: boolean | null
+          organized_by?: string | null
+          livestream_url?: string | null
+          brochure_url?: string | null
+          status?: string | null
+          featured?: boolean | null
+          views_count?: number | null
+          deceased_photo_url?: string | null
+          biography?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "funerals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       condolences: {
         Row: {
           id: string
-          funeral_id: string
-          author_name: string
-          author_email: string | null
-          author_location: string | null
-          message: string
-          is_approved: boolean
           created_at: string
+          funeral_id: string
+          author_name: string | null
+          message: string | null
+          is_approved: boolean | null
         }
         Insert: {
           id?: string
-          funeral_id: string
-          author_name: string
-          author_email?: string | null
-          author_location?: string | null
-          message: string
-          is_approved?: boolean
           created_at?: string
+          funeral_id: string
+          author_name?: string | null
+          message?: string | null
+          is_approved?: boolean | null
         }
         Update: {
           id?: string
-          funeral_id?: string
-          author_name?: string
-          author_email?: string | null
-          author_location?: string | null
-          message?: string
-          is_approved?: boolean
           created_at?: string
+          funeral_id?: string
+          author_name?: string | null
+          message?: string | null
+          is_approved?: boolean | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "condolences_funeral_id_fkey"
+            columns: ["funeral_id"]
+            isOneToOne: false
+            referencedRelation: "funerals"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       donations: {
         Row: {
           id: string
-          funeral_id: string
-          donor_name: string | null
-          donor_email: string | null
-          amount: number
-          currency: string
-          message: string | null
-          payment_method: string | null
-          payment_reference: string | null
-          status: "pending" | "completed" | "failed" | "refunded"
           created_at: string
+          funeral_id: string
+          amount: number
         }
         Insert: {
           id?: string
-          funeral_id: string
-          donor_name?: string | null
-          donor_email?: string | null
-          amount: number
-          currency?: string
-          message?: string | null
-          payment_method?: string | null
-          payment_reference?: string | null
-          status?: "pending" | "completed" | "failed" | "refunded"
           created_at?: string
+          funeral_id: string
+          amount: number
         }
         Update: {
           id?: string
-          funeral_id?: string
-          donor_name?: string | null
-          donor_email?: string | null
-          amount?: number
-          currency?: string
-          message?: string | null
-          payment_method?: string | null
-          payment_reference?: string | null
-          status?: "pending" | "completed" | "failed" | "refunded"
           created_at?: string
+          funeral_id?: string
+          amount?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "donations_funeral_id_fkey"
+            columns: ["funeral_id"]
+            isOneToOne: false
+            referencedRelation: "funerals"
+            referencedColumns: ["id"]
+          }
+        ]
       }
-      admin_actions: {
+      profiles: {
         Row: {
           id: string
-          admin_id: string | null
-          action_type: string
-          target_type: string
-          target_id: string
-          details: Json | null
-          created_at: string
+          updated_at: string | null
+          username: string | null
+          full_name: string | null
+          avatar_url: string | null
+          website: string | null
         }
         Insert: {
-          id?: string
-          admin_id?: string | null
-          action_type: string
-          target_type: string
-          target_id: string
-          details?: Json | null
-          created_at?: string
+          id: string
+          updated_at?: string | null
+          username?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
+          website?: string | null
         }
         Update: {
           id?: string
-          admin_id?: string | null
-          action_type?: string
-          target_type?: string
-          target_id?: string
-          details?: Json | null
-          created_at?: string
+          updated_at?: string | null
+          username?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
+          website?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
@@ -248,7 +249,20 @@ export interface Database {
       donation_status: "pending" | "completed" | "failed" | "refunded"
     }
     CompositeTypes: {
-      [_ in never]: never
+      funeral_stats: {
+        condolences_count: number
+        donations_total: number
+        donations_count: number
+        views_count: number
+      }
+      admin_stats: {
+        total_users: number
+        total_funerals: number
+        pending_funerals: number
+        flagged_content: number
+        total_donations: number
+        monthly_growth: number
+      }
     }
   }
 }

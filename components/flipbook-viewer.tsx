@@ -1,44 +1,100 @@
-"use client"
-
-import type React from "react"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { X, ZoomIn, ZoomOut, Maximize, Share2, ChevronLeft, ChevronRight, Download } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  X,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import * as pdfjsLib from "pdfjs-dist";
+import "pdfjs-dist/web/pdf_viewer.css";
+import { configurePdfWorker, loadPdf } from "@/lib/pdf-utils";
+import { isCloudinaryRawUrl, getDownloadUrl } from "@/lib/cloudinary-utils";
 
 interface FlipbookViewerProps {
-  pdfUrl: string
-  onClose: () => void
+  pdfUrl: string;
+  onClose: () => void;
 }
 
 export function FlipbookViewer({ pdfUrl, onClose }: FlipbookViewerProps) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [zoom, setZoom] = useState(100)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const totalPages = 8 // This would come from PDF analysis
+  const [numPages, setNumPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pdf, setPdf] = useState<any>(null);
+  const [zoom, setZoom] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1)
-  }
+  useEffect(() => {
+    // Configure the PDF.js worker when component mounts
+    configurePdfWorker();
+  }, []);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-  }
+  useEffect(() => {
+    const initPdf = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Check if URL is from Cloudinary and if there's a fallback URL
+        let urlToLoad = pdfUrl;
+        if (isCloudinaryRawUrl(pdfUrl)) {
+          const downloadUrl = getDownloadUrl(pdfUrl);
+          if (downloadUrl !== pdfUrl) {
+            console.log('Using download URL for Cloudinary PDF');
+            urlToLoad = downloadUrl;
+          }
+        }
+        
+        const result = await loadPdf(urlToLoad);
+        
+        if ('error' in result) {
+          setError(result.error);
+          setLoading(false);
+          return;
+        }
+        
+        setPdf(result.pdf);
+        setNumPages(result.numPages);
+        setCurrentPage(1);
+        setLoading(false);
+      } catch (error: any) {
+        console.error('PDF initialization error:', error);
+        setError(error.message || 'An unexpected error occurred');
+        setLoading(false);
+      }
+    };
+    
+    if (pdfUrl) {
+      initPdf();
+    }
+  }, [pdfUrl]);
 
-  const handleZoomIn = () => {
-    if (zoom < 200) setZoom(zoom + 25)
-  }
-
-  const handleZoomOut = () => {
-    if (zoom > 50) setZoom(zoom - 25)
-  }
+  useEffect(() => {
+    const renderPage = async () => {
+      if (!pdf || !canvasRef.current) return;
+      const page = await pdf.getPage(currentPage);
+      const viewport = page.getViewport({ scale: zoom / 100 });
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      await page.render({ canvasContext: context, viewport }).promise;
+    };
+    renderPage();
+  }, [pdf, currentPage, zoom]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowLeft") handlePrevPage()
-    if (e.key === "ArrowRight") handleNextPage()
-    if (e.key === "Escape") onClose()
-  }
+    if (e.key === "Escape") onClose();
+    if (e.key === "ArrowLeft") setCurrentPage((p) => Math.max(1, p - 1));
+    if (e.key === "ArrowRight")
+      setCurrentPage((p) => Math.min(numPages, p + 1));
+  };
 
   return (
     <AnimatePresence>
@@ -61,177 +117,124 @@ export function FlipbookViewer({ pdfUrl, onClose }: FlipbookViewerProps) {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Funeral Brochure</h3>
+              <h3 className="text-xl font-bold text-slate-800">
+                Funeral Brochure
+              </h3>
               <p className="text-sm text-slate-600">Interactive PDF Viewer</p>
             </div>
-
-            <div className="flex items-center space-x-2">
-              {/* Zoom Controls */}
-              <div className="flex items-center space-x-1 bg-white rounded-lg p-1 border border-slate-200">
-                <Button variant="ghost" size="sm" onClick={handleZoomOut} disabled={zoom <= 50}>
-                  <ZoomOut className="w-4 h-4" />
-                </Button>
-                <span className="text-sm px-3 py-1 min-w-[60px] text-center font-medium">{zoom}%</span>
-                <Button variant="ghost" size="sm" onClick={handleZoomIn} disabled={zoom >= 200}>
-                  <ZoomIn className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Action Buttons */}
-              <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                <Download className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                <Share2 className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="rounded-lg">
-                <Maximize className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={onClose} className="rounded-lg bg-transparent">
-                <X className="w-4 h-4" />
-              </Button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsFullscreen((f) => !f)}
+                className="p-2 rounded hover:bg-slate-200"
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-5 h-5" />
+                ) : (
+                  <Maximize2 className="w-5 h-5" />
+                )}
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 rounded hover:bg-red-100"
+                title="Close"
+              >
+                <X className="w-6 h-6 text-red-500" />
+              </button>
             </div>
           </div>
 
-          {/* Flipbook Content */}
-          <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-            <div className="relative">
-              <motion.div
-                key={currentPage}
-                initial={{ rotateY: -90, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                exit={{ rotateY: 90, opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white shadow-2xl rounded-lg overflow-hidden"
-                style={{
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: "center",
-                }}
-              >
-                {/* Simulated PDF pages */}
-                <div className="w-96 h-[500px] bg-white border flex flex-col">
-                  {/* Page Header */}
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6 text-center">
-                    <h2 className="text-2xl font-bold mb-2">In Loving Memory</h2>
-                    <p className="text-slate-300">
-                      Page {currentPage} of {totalPages}
-                    </p>
-                  </div>
-
-                  {/* Page Content */}
-                  <div className="flex-1 p-8 flex flex-col justify-center items-center text-center">
-                    <div className="w-24 h-24 bg-gradient-to-br from-amber-200 to-orange-300 rounded-full mb-6 flex items-center justify-center">
-                      <span className="text-2xl">📖</span>
-                    </div>
-
-                    <h3 className="text-xl font-bold text-slate-800 mb-4">
-                      {currentPage === 1 && "Cover Page"}
-                      {currentPage === 2 && "Life Story"}
-                      {currentPage === 3 && "Family & Friends"}
-                      {currentPage === 4 && "Achievements"}
-                      {currentPage === 5 && "Photo Gallery"}
-                      {currentPage === 6 && "Tributes"}
-                      {currentPage === 7 && "Service Details"}
-                      {currentPage === 8 && "Thank You"}
-                    </h3>
-
-                    <div className="space-y-4 text-slate-600">
-                      <p className="text-sm leading-relaxed">
-                        This interactive flipbook would display the actual PDF content using PDF.js or a similar
-                        library.
-                      </p>
-
-                      <div className="bg-slate-50 rounded-lg p-4">
-                        <p className="text-xs font-medium text-slate-700 mb-2">Real Implementation Features:</p>
-                        <ul className="text-xs text-slate-600 space-y-1 text-left">
-                          <li>• PDF.js for high-quality rendering</li>
-                          <li>• Turn.js for realistic page flipping</li>
-                          <li>• Touch gestures for mobile devices</li>
-                          <li>• Search functionality within pages</li>
-                          <li>• Bookmark and annotation support</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
+          {/* PDF Canvas */}
+          <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-100 to-slate-200 overflow-auto">
+            {loading && (
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-700 font-medium">Loading PDF...</p>
+              </div>
+            )}
+            
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+                <h3 className="text-lg font-semibold text-red-700 mb-2">Error Loading PDF</h3>
+                <p className="text-red-600">{error}</p>
+                {isCloudinaryRawUrl(pdfUrl) && (
+                  <p className="text-sm text-slate-600 mt-2">
+                    This PDF is stored on Cloudinary and may require authentication. 
+                    Try downloading it first and then viewing it locally.
+                  </p>
+                )}
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Try Again
+                  </button>
+                  {isCloudinaryRawUrl(pdfUrl) && (
+                    <a
+                      href={getDownloadUrl(pdfUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Download PDF
+                    </a>
+                  )}
                 </div>
-              </motion.div>
+              </div>
+            )}
+            
+            {!loading && !error && (
+              <canvas
+                ref={canvasRef}
+                className="shadow-2xl rounded-lg border bg-white"
+              />
+            )}
+          </div>
 
-              {/* Navigation Arrows */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevPage}
+          {/* Controls */}
+          <div className="flex items-center justify-between p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 -translate-x-full bg-white/90 backdrop-blur-sm rounded-full w-12 h-12 p-0 shadow-lg hover:shadow-xl"
+                className="p-2 rounded hover:bg-slate-200 disabled:opacity-50"
+                title="Previous Page"
               >
                 <ChevronLeft className="w-5 h-5" />
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 translate-x-full bg-white/90 backdrop-blur-sm rounded-full w-12 h-12 p-0 shadow-lg hover:shadow-xl"
+              </button>
+              <span className="text-slate-700 font-medium">
+                Page {currentPage} of {numPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+                disabled={currentPage === numPages}
+                className="p-2 rounded hover:bg-slate-200 disabled:opacity-50"
+                title="Next Page"
               >
                 <ChevronRight className="w-5 h-5" />
-              </Button>
+              </button>
             </div>
-          </div>
-
-          {/* Footer Controls */}
-          <div className="flex items-center justify-between p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                className="rounded-lg bg-transparent"
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setZoom((z) => Math.max(25, z - 10))}
+                className="p-2 rounded hover:bg-slate-200"
+                title="Zoom Out"
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="rounded-lg bg-transparent"
+                <ZoomOut className="w-5 h-5" />
+              </button>
+              <span className="text-slate-700 font-medium">{zoom}%</span>
+              <button
+                onClick={() => setZoom((z) => Math.min(400, z + 10))}
+                className="p-2 rounded hover:bg-slate-200"
+                title="Zoom In"
               >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-
-            {/* Page Indicators */}
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-slate-600 font-medium">
-                Page {currentPage} of {totalPages}
-              </span>
-              <div className="flex space-x-1">
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <motion.button
-                    key={i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-all duration-200 ${
-                      currentPage === i + 1
-                        ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md"
-                        : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                    }`}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    {i + 1}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 text-sm text-slate-500">
-              <span>Use arrow keys to navigate</span>
+                <ZoomIn className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
-  )
+  );
 }

@@ -90,7 +90,7 @@ export default function DashboardPage() {
         .select('full_name')
         .eq('id', authUser.id)
         .single();
-      setUser(profileData);
+      setUser(profileData ? { ...profileData, full_name: profileData.full_name ?? '' } : null);
 
       // Fetch funerals for the user
       const { data: funeralsData, error } = await supabase
@@ -99,7 +99,15 @@ export default function DashboardPage() {
         .eq('user_id', authUser.id);
 
       if (funeralsData) {
-        setFunerals(funeralsData);
+        const transformedFunerals = funeralsData.map(f => ({
+          ...f,
+          id: String(f.id),
+          deceased_name: f.deceased_name ?? '',
+          funeral_date: f.funeral_date ?? '',
+          created_at: f.created_at ?? '',
+          status: (f.status ?? 'pending') as 'pending' | 'approved' | 'rejected' | null,
+        }));
+        setFunerals(transformedFunerals);
         // Basic stats calculation (can be expanded)
         setStats({
           totalFunerals: funeralsData.length,
@@ -356,7 +364,7 @@ export default function DashboardPage() {
                               </Button>
                             </div>
                             <Button asChild variant="outline">
-                              <Link href={`/edit-funeral/${funeral.id}`}>
+                              <Link href={`/create-funeral?id=${funeral.id}`}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </Link>

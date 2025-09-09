@@ -21,8 +21,11 @@ import {
 import Image from "next/image";
 import { GuestbookForm } from "./guestbook-form";
 import { DonationWidget } from "./donation-widget";
-import { FlipbookViewer } from "./flipbook-viewer";
+import { EnhancedPdfViewer } from "./enhanced-pdf-viewer";
+import { InlinePdfViewer } from "./inline-pdf-viewer";
+import { PdfDisplay } from "./pdf-display";
 import { motion } from "framer-motion";
+import { getPublicPdfUrl } from "@/lib/cloudinary-utils";
 
 interface FuneralEventPageProps {
   funeral: {
@@ -40,7 +43,7 @@ interface FuneralEventPageProps {
       venue: string;
       region: string;
       location: string;
-      coordinates: { lat: number; lng: number };
+
     };
     organized_by: string;
     poster: string;
@@ -69,16 +72,21 @@ interface FuneralEventPageProps {
 }
 
 export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
-  const [showFlipbook, setShowFlipbook] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Deterministic date formatter (UTC) to avoid hydration mismatch when server
+  // and client have different default locales/timezones.
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-GB", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    // Use UTC components to keep stable; e.g. Thursday, 25 September 2025
+    const weekdays = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const wd = weekdays[d.getUTCDay()];
+    const day = d.getUTCDate();
+    const month = months[d.getUTCMonth()];
+    const year = d.getUTCFullYear();
+    return `${wd}, ${day} ${month} ${year}`; // match format without locale variance
   };
 
   const calculateAge = (dob: string, dod: string) => {
@@ -158,8 +166,8 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <p className="text-xl text-slate-300 mb-2">
-                    {funeral.deceased?.dob ? new Date(funeral.deceased.dob).toLocaleDateString() : "N/A"} -{" "}
-                    {funeral.deceased?.dod ? new Date(funeral.deceased.dod).toLocaleDateString() : "N/A"}
+                    {funeral.deceased?.dob ? formatDate(funeral.deceased.dob) : "N/A"} - {" "}
+                    {funeral.deceased?.dod ? formatDate(funeral.deceased.dod) : "N/A"}
                   </p>
                   <p className="text-amber-300 font-semibold text-lg">
                     {funeral.deceased?.dob && funeral.deceased?.dod ? calculateAge(funeral.deceased.dob, funeral.deceased.dod) : "N/A"}{" "}
@@ -291,9 +299,13 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                           Funeral Brochure
                         </h3>
                         {funeral.brochure_url ? (
-                          <div className="mt-4">
-                            <FlipbookViewer pdfUrl={funeral.brochure_url} onClose={() => {}} />
-                          </div>
+                          <PdfDisplay 
+                            pdfUrl={funeral.brochure_url}
+                            title="Funeral Brochure"
+                            description="Memorial service details and tribute information"
+                            mode="flipbook"
+                            showThumbnail={true}
+                          />
                         ) : (
                           <p className="text-slate-500">The funeral brochure is not available yet.</p>
                         )}
@@ -403,9 +415,7 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                                 </p>
                               </div>
                               <p className="text-xs text-slate-400">
-                                {new Date(
-                                  condolence.timestamp
-                                ).toLocaleDateString()}
+                                {formatDate(condolence.timestamp)}
                               </p>
                             </div>
                             <p className="text-slate-700 leading-relaxed">
@@ -550,13 +560,19 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Button
-                  onClick={() => funeral.brochure_url && setShowFlipbook(true)}
-                  className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-xl py-3"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  View Interactive Brochure
-                </Button>
+                {funeral.brochure_url ? (
+                  <PdfDisplay 
+                    pdfUrl={funeral.brochure_url}
+                    title="Funeral Brochure"
+                    description="Memorial service details and tribute information"
+                    mode="modal"
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-600">Brochure coming soon</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -602,14 +618,6 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
           </motion.div>
         </div>
       </div>
-
-      {/* Flipbook Modal */}
-      {showFlipbook && (
-        <FlipbookViewer
-          pdfUrl={funeral.brochure_url}
-          onClose={() => setShowFlipbook(false)}
-        />
-      )}
     </div>
   );
 }

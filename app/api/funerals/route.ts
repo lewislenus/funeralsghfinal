@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
       region: searchParams.get("region") || undefined,
       status: (searchParams.get("status") as "upcoming" | "past" | "all") || "all",
       dateRange: (searchParams.get("dateRange") as "week" | "month" | "all") || "all",
-      sortBy: (searchParams.get("sortBy") as "date" | "name" | "recent" | "popular") || "date",
+      // Sanitize values like "date:1" that sometimes appear from dev tooling by taking the part before ':'
+      sortBy: ((searchParams.get("sortBy")?.split(":")[0] as "date" | "name" | "recent" | "popular") || "date"),
       limit: searchParams.get("limit") ? Number.parseInt(searchParams.get("limit")!) : undefined,
       offset: searchParams.get("offset") ? Number.parseInt(searchParams.get("offset")!) : undefined,
     }
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     const result = await funeralsAPI.getFunerals(filters)
 
     if (result.error) {
+      console.error("/api/funerals error:", result.error)
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
       success: true,
     })
   } catch (error) {
+    console.error("/api/funerals unexpected error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

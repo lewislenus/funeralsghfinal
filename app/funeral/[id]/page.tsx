@@ -4,15 +4,24 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { notFound } from "next/navigation";
 
-export default async function FuneralPage({ params }: { params: { id: string } }) {
-  console.log("Fetching funeral with ID:", params.id);
-  
+export default async function FuneralPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const funeralId = parseInt(params.id, 10);
+  if (isNaN(funeralId)) {
+    console.error("Invalid funeral ID:", params.id);
+    notFound();
+  }
+
+  console.log("Fetching funeral with ID:", funeralId);
+
   const supabase = createServerClient();
   const { data: funeral, error } = await supabase
     .from("funerals")
     .select("*")
-    .eq("id", params.id)
-    .eq("status", "approved")
+    .eq("id", funeralId)
     .single();
 
   console.log("Supabase response:", { data: funeral, error });
@@ -29,31 +38,28 @@ export default async function FuneralPage({ params }: { params: { id: string } }
 
   // Transform the flat data structure from Supabase to the nested structure expected by the component
   const funeralData = {
-    id: funeral.id,
+    id: funeral.id.toString(), // Convert ID to string for the component
     deceased: {
       name: funeral.deceased_name,
       photo: funeral.image_url || "/funeral1.jpg",
-      dob: funeral.date_of_birth,
-      dod: funeral.date_of_death,
+      dob: funeral.date_of_birth || "Not specified",
+      dod: funeral.date_of_death || "Not specified",
       life_story: funeral.life_story || "",
     },
     funeral: {
-      date: funeral.funeral_date,
-      time: funeral.funeral_time, // Assuming you have a funeral_time column
-      venue: funeral.venue, // Assuming you have a venue column
-      region: funeral.region, // Assuming you have a region column
-      location: funeral.funeral_location,
-      coordinates: funeral.coordinates as { lat: number; lng: number } || { lat: 0, lng: 0 },
+      date: funeral.funeral_date || "Not specified",
+      time: funeral.funeral_time || "Not specified",
+      venue: funeral.venue || "Not specified",
+      region: funeral.region || "Not specified",
+      location: funeral.funeral_location || "Not specified",
     },
     organized_by: funeral.organized_by || "Family",
     poster: funeral.poster_url || "",
     brochure_url: funeral.brochure_url || "",
     livestream_url: funeral.livestream_url || null,
-    isUpcoming: new Date(funeral.funeral_date) > new Date(),
-    // These are not in the single funeral fetch, so we provide default/empty values.
-    // You would need to fetch these separately if needed.
-    condolences: [], 
-    donations: { total: 0, currency: 'USD', supporters: 0, recent: [] },
+    isUpcoming: funeral.funeral_date ? new Date(funeral.funeral_date) > new Date() : false,
+    condolences: [],
+    donations: { total: 0, currency: "USD", supporters: 0, recent: [] },
   };
 
   return (

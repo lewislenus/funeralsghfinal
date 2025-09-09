@@ -1,9 +1,11 @@
-import { createClient } from "@/lib/supabase/client";
+// Choose the appropriate Supabase client based on runtime (server vs browser)
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { createClient as createServerClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
-type Funeral = Database["public"]["Tables"]["funerals"]["Row"];
-type FuneralInsert = Database["public"]["Tables"]["funerals"]["Insert"];
-type FuneralUpdate = Database["public"]["Tables"]["funerals"]["Update"];
+export type Funeral = Database["public"]["Tables"]["funerals"]["Row"];
+export type FuneralInsert = Database["public"]["Tables"]["funerals"]["Insert"];
+export type FuneralUpdate = Database["public"]["Tables"]["funerals"]["Update"];
 
 export interface FuneralWithStats extends Funeral {
   condolences_count: number;
@@ -26,8 +28,48 @@ export interface FuneralFilters {
   offset?: number;
 }
 
+function getSupabase() {
+  // Check if we're in a server environment
+  if (typeof window === "undefined") {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!url || !key) {
+      throw new Error("Missing Supabase environment variables");
+    }
+    
+    // Server-side: use createClient from supabase-js directly
+    return createServerClient<Database>(url, key);
+  }
+  // Client-side: use the component client
+  return createBrowserClient();
+}
+
 export class FuneralsAPI {
-  private supabase = createClient();
+  private supabase = getSupabase();
+
+  private transformFuneralData(rawData: any): FuneralWithStats {
+    const condolences_count = Array.isArray(rawData.condolences)
+      ? rawData.condolences[0]?.count ?? 0
+      : 0;
+
+    const donations_total = Array.isArray(rawData.donations)
+      ? rawData.donations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0)
+      : 0;
+    const donations_count = Array.isArray(rawData.donations)
+      ? rawData.donations.length
+      : 0;
+
+    const { condolences, donations, ...rest } = rawData;
+
+    return {
+      ...rest,
+      condolences_count,
+      donations_total,
+      donations_count,
+      views_count: rawData.views_count || 0,
+    } as FuneralWithStats;
+  }
 
   async getAllFunerals(): Promise<{
     data: FuneralWithStats[];
@@ -35,15 +77,27 @@ export class FuneralsAPI {
     error: string | null;
   }> {
     try {
-      let query = this.supabase.from("funerals").select(`
-        *,
-        condolences!inner(count),
-        donations!inner(amount, status)
-      `);
-      const { data, count, error } = await query;
-      return { data: data || [], count: count || 0, error: error ? error.message : null };
-    } catch (e: any) {
-      return { data: [], count: 0, error: e.message || "Unknown error" };
+      const { data, count, error } = await this.supabase
+        .from("funerals")
+        .select("*, condolences(count), donations(amount)", { count: "exact" });
+
+      if (error) {
+        return { data: [], count: 0, error: error.message };
+      }
+
+      const funeralsWithStats: FuneralWithStats[] =
+        data?.map(this.transformFuneralData) || [];
+
+      return { data: funeralsWithStats, count: count || 0, error: null };
+    } catch (error) {
+      return {
+        data: [],
+        count: 0,
+        error:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      };
     }
   }
 
@@ -53,23 +107,18 @@ export class FuneralsAPI {
     error: string | null;
   }> {
     try {
-      let query = this.supabase.from("funerals").select(`
-          *,
-          condolences!inner(count),
-          donations!inner(amount, status)
-        `);
+      let query = this.supabase
+        .from("funerals")
+        .select("*, condolences(count), donations(amount)", { count: "exact" });
 
-      // Always filter for approved funerals for public website
+      // Only show approved funerals by default
       query = query.eq("status", "approved");
 
       // Apply search filter
       if (filters.search) {
-        query = query.or(`
-          deceased_name.ilike.%${filters.search}%,
-          family_name.ilike.%${filters.search}%,
-          location.ilike.%${filters.search}%,
-          venue.ilike.%${filters.search}%
-        `);
+        query = query.or(
+          `deceased_name.ilike.%${filters.search}%,family_name.ilike.%${filters.search}%,location.ilike.%${filters.search}%,venue.ilike.%${filters.search}%`
+        );
       }
 
       // Apply region filter
@@ -139,33 +188,16 @@ export class FuneralsAPI {
       const { data: funerals, error, count } = await query;
 
       if (error) {
+        console.error("Supabase query error:", error)
         return { data: [], count: 0, error: error.message };
       }
 
-      // Transform data to include calculated stats
       const funeralsWithStats: FuneralWithStats[] =
-        funerals?.map((funeral) => {
-          const condolencesCount = funeral.condolences?.length || 0;
-          const completedDonations =
-            funeral.donations?.filter(
-              (d: { status: string }) => d.status === "completed"
-            ) || [];
-          const donationsTotal = completedDonations.reduce(
-            (sum: number, d: { amount: number | null }) =>
-              sum + (d.amount || 0),
-            0
-          );
-
-          return {
-            ...funeral,
-            condolences_count: condolencesCount,
-            donations_total: donationsTotal,
-            donations_count: completedDonations.length,
-          };
-        }) || [];
+        funerals?.map(this.transformFuneralData) || [];
 
       return { data: funeralsWithStats, count: count || 0, error: null };
     } catch (error) {
+      console.error("Unexpected error in getFunerals:", error)
       return {
         data: [],
         count: 0,
@@ -182,19 +214,13 @@ export class FuneralsAPI {
     error: string | null;
   }> {
     try {
-      const { data: funeral, error } = await this.supabase
+      if (!id || typeof id !== 'string') {
+        return { data: null, error: "Invalid funeral ID" };
+      }
+
+      const { data, error } = await this.supabase
         .from("funerals")
-        .select(
-          `
-          *,
-          condolences(
-            id, author_name, author_location, message, created_at
-          ),
-          donations(
-            id, donor_name, amount, message, created_at, status
-          )
-        `
-        )
+        .select("*, condolences(count), donations(amount)")
         .eq("id", id)
         .single();
 
@@ -202,33 +228,13 @@ export class FuneralsAPI {
         return { data: null, error: error.message };
       }
 
-      if (!funeral) {
+      if (!data) {
         return { data: null, error: "Funeral not found" };
       }
 
-      // Increment view count
-      await this.incrementViews(id);
+      await this.incrementViews(data.id);
 
-      // Calculate stats
-      const approvedCondolences =
-        funeral.condolences?.filter(
-          (c: { is_approved: boolean }) => c.is_approved
-        ) || [];
-      const completedDonations =
-        funeral.donations?.filter(
-          (d: { status: string }) => d.status === "completed"
-        ) || [];
-      const donationsTotal = completedDonations.reduce(
-        (sum: number, d: { amount: number | null }) => sum + (d.amount || 0),
-        0
-      );
-
-      const funeralWithStats: FuneralWithStats = {
-        ...funeral,
-        condolences_count: approvedCondolences.length,
-        donations_total: donationsTotal,
-        donations_count: completedDonations.length,
-      };
+      const funeralWithStats: FuneralWithStats = this.transformFuneralData(data);
 
       return { data: funeralWithStats, error: null };
     } catch (error) {
@@ -271,12 +277,16 @@ export class FuneralsAPI {
 
   async updateFuneral(
     id: string,
-    updates: FuneralUpdate
+    updates: Omit<FuneralUpdate, "id">
   ): Promise<{
     data: Funeral | null;
     error: string | null;
   }> {
     try {
+      if (!id || typeof id !== 'string') {
+        return { data: null, error: "Invalid funeral ID" };
+      }
+
       const { data, error } = await this.supabase
         .from("funerals")
         .update(updates)
@@ -285,23 +295,29 @@ export class FuneralsAPI {
         .single();
 
       if (error) {
-        return { data: null, error: error.message };
+        console.error("Error updating funeral:", error);
+        return {
+          data: null,
+          error: "Failed to update funeral",
+        };
       }
 
       return { data, error: null };
-    } catch (error) {
+    } catch (err) {
+      console.error("Unexpected error updating funeral:", err);
       return {
         data: null,
-        error:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
+        error: "An unexpected error occurred",
       };
     }
   }
 
   async deleteFuneral(id: string): Promise<{ error: string | null }> {
     try {
+      if (!id || typeof id !== 'string') {
+        return { error: "Invalid funeral ID" };
+      }
+
       const { error } = await this.supabase
         .from("funerals")
         .delete()
@@ -324,9 +340,18 @@ export class FuneralsAPI {
 
   private async incrementViews(id: string): Promise<void> {
     try {
-      await this.supabase.rpc("increment_funeral_views", { funeral_uuid: id });
+      if (id && typeof id === 'string') {
+        // Validate UUID format before making the call
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (!isUuid) {
+          console.error("Invalid UUID format for incrementViews:", id);
+          return;
+        }
+        
+        // Call the RPC function with the correct parameter name
+        await this.supabase.rpc("increment_funeral_views", { funeral_uuid: id });
+      }
     } catch (error) {
-      // Silently fail view increment to not affect user experience
       console.error("Failed to increment views:", error);
     }
   }
@@ -338,42 +363,19 @@ export class FuneralsAPI {
     try {
       const { data: funerals, error } = await this.supabase
         .from("funerals")
-        .select(
-          `
-          *,
-          condolences!inner(count),
-          donations!inner(amount, status)
-        `
-        )
-        .eq("is_featured", true)
-        .order("created_at", { ascending: false })
+        .select("*, condolences(count), donations(amount)")
+        .eq("status", "approved")
+        .eq("featured", true)
+        .order("funeral_date", { ascending: true })
         .limit(limit);
 
       if (error) {
         return { data: [], error: error.message };
       }
 
-      // Transform data to include calculated stats
-      const funeralsWithStats: FuneralWithStats[] =
-        funerals?.map((funeral) => {
-          const condolencesCount = funeral.condolences?.length || 0;
-          const completedDonations =
-            funeral.donations?.filter(
-              (d: { status: string }) => d.status === "completed"
-            ) || [];
-          const donationsTotal = completedDonations.reduce(
-            (sum: number, d: { amount: number | null }) =>
-              sum + (d.amount || 0),
-            0
-          );
-
-          return {
-            ...funeral,
-            condolences_count: condolencesCount,
-            donations_total: donationsTotal,
-            donations_count: completedDonations.length,
-          };
-        }) || [];
+      const funeralsWithStats: FuneralWithStats[] = funerals.map(
+        this.transformFuneralData
+      );
 
       return { data: funeralsWithStats, error: null };
     } catch (error) {
@@ -393,21 +395,9 @@ export class FuneralsAPI {
     error: string | null;
   }> {
     try {
-      const {
-        data: funerals,
-        error,
-        count,
-      } = await this.supabase
+      const { data, error, count } = await this.supabase
         .from("funerals")
-        .select(
-          `
-          *,
-          profiles:organizer_id(full_name, email),
-          condolences!inner(count),
-          donations!inner(amount, status)
-        `,
-          { count: "exact" }
-        )
+        .select("*, condolences(count), donations(amount)", { count: "exact" })
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
@@ -415,33 +405,46 @@ export class FuneralsAPI {
         return { data: [], count: 0, error: error.message };
       }
 
-      // Transform data to include calculated stats and UI-friendly properties
       const funeralsWithStats: FuneralWithStats[] =
-        funerals?.map((funeral) => {
-          const condolencesCount = funeral.condolences?.length || 0;
-          const completedDonations =
-            funeral.donations?.filter(
-              (d: { status: string }) => d.status === "completed"
-            ) || [];
-          const donationsTotal = completedDonations.reduce(
-            (sum: number, d: { amount: number | null }) =>
-              sum + (d.amount || 0),
-            0
-          );
+        data?.map(this.transformFuneralData) || [];
 
-          // Make sure profiles data is properly accessed
-          const profileData = funeral.profiles || {};
+      return { data: funeralsWithStats, count: count || 0, error: null };
+    } catch (error) {
+      return {
+        data: [],
+        count: 0,
+        error:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      };
+    }
+  }
 
-          // Add UI-friendly properties for the admin page
+  async getAdminFunerals(): Promise<{
+    data: FuneralWithStats[];
+    count: number;
+    error: string | null;
+  }> {
+    try {
+      const { data, error, count } = await this.supabase
+        .from("funerals")
+        .select(`*, condolences(count), donations(amount)`, { count: "exact" })
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        return { data: [], count: 0, error: error.message };
+      }
+
+      const funeralsWithStats: FuneralWithStats[] =
+        data?.map((f) => {
+          const transformed = this.transformFuneralData(f);
           return {
-            ...funeral,
-            deceased: funeral.deceased_name || "Unknown Deceased",
-            organizer: profileData.full_name || "Unknown Organizer",
-            date: funeral.funeral_date || new Date().toISOString(),
-            submittedAt: funeral.created_at || new Date().toISOString(),
-            condolences_count: condolencesCount,
-            donations_total: donationsTotal,
-            donations_count: completedDonations.length,
+            ...transformed,
+            deceased: f.deceased_name,
+            organizer: f.family_name ?? undefined,
+            date: f.funeral_date ?? undefined,
+            submittedAt: f.created_at ?? undefined,
           };
         }) || [];
 

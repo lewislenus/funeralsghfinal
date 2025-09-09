@@ -1,9 +1,10 @@
-import { HeroSection } from "@/components/hero-section"
-import { FuneralDirectory } from "@/components/funeral-directory"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { StatsSection } from "@/components/stats-section"
-import { FeaturesSection } from "@/components/features-section"
+import { HeroSection } from "@/components/hero-section";
+import { FuneralDirectory } from "@/components/funeral-directory";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { StatsSection } from "@/components/stats-section";
+import { FeaturesSection } from "@/components/features-section";
+import { TestimonialsSection } from "@/components/testimonials-section";
 
 export default function HomePage() {
   return (
@@ -14,8 +15,9 @@ export default function HomePage() {
         <StatsSection />
         <FeaturesSection />
         <FuneralDirectory />
+        <TestimonialsSection />
       </main>
       <Footer />
     </div>
-  )
+  );
 }

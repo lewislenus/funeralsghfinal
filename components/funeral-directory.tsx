@@ -1,93 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FuneralCard } from "./funeral-card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-// Sample funeral data for homepage preview
-const sampleFunerals = [
-  {
-    id: "1",
-    deceased: {
-      name: "Kwame Asante",
-      photo: "/funeral1.jpg",
-      dob: "1945-03-15",
-      dod: "2024-01-10",
-      biography:
-        "A beloved teacher and community leader who dedicated his life to education in Kumasi.",
-    },
-    funeral: {
-      date: "2024-01-20",
-      time: "09:00",
-      venue: "St. Peter's Cathedral",
-      region: "Ashanti",
-      location: "Kumasi, Ghana",
-    },
-    family: "Asante Family",
-    poster: "/funeral2.jpg",
-    livestream: "https://youtube.com/watch?v=example",
-    isUpcoming: true,
-    condolences: 23,
-    donations: 5420,
-    views: 245,
-  },
-  {
-    id: "2",
-    deceased: {
-      name: "Akosua Mensah",
-      photo: "/funeral3.jpg",
-      dob: "1960-07-22",
-      dod: "2024-01-08",
-      biography:
-        "A successful businesswoman and mother who touched many lives in Accra.",
-    },
-    funeral: {
-      date: "2024-01-18",
-      time: "10:00",
-      venue: "Holy Trinity Cathedral",
-      region: "Greater Accra",
-      location: "Accra, Ghana",
-    },
-    family: "Mensah Family",
-    poster: "/funeral4.jpg",
-    livestream: "https://facebook.com/watch?v=example",
-    isUpcoming: true,
-    condolences: 18,
-    donations: 3200,
-    views: 189,
-  },
-  {
-    id: "3",
-    deceased: {
-      name: "Kofi Boateng",
-      photo: "/funeral5.jpg",
-      dob: "1938-11-05",
-      dod: "2024-01-05",
-      biography:
-        "A respected elder and traditional leader from the Northern Region.",
-    },
-    funeral: {
-      date: "2024-01-15",
-      time: "08:00",
-      venue: "Tamale Central Mosque",
-      region: "Northern",
-      location: "Tamale, Ghana",
-    },
-    family: "Boateng Family",
-    poster: "/funeral1.jpg",
-    livestream: null,
-    isUpcoming: false,
-    condolences: 15,
-    donations: 2800,
-    views: 156,
-  },
-];
-
 export function FuneralDirectory() {
-  const [funerals] = useState(sampleFunerals);
+  const [funerals, setFunerals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Transform API data to format expected by FuneralCard
+  const transformFuneralData = (apiData: any) => {
+    return {
+      id: apiData.id,
+      deceased: {
+        name: apiData.deceased_name || "Unknown",
+        photo: apiData.deceased_photo_url || apiData.image_url || apiData.poster_url || "/funeral1.jpg",
+        dob: apiData.date_of_birth || "",
+        dod: apiData.date_of_death || "",
+        biography: apiData.biography || apiData.life_story || "",
+      },
+      funeral: {
+        date: apiData.funeral_date || "",
+        time: apiData.funeral_time || "",
+        venue: apiData.venue || apiData.funeral_location || "",
+        region: apiData.region || "",
+        location: apiData.location || "",
+      },
+      family: apiData.family_name || apiData.organized_by || "Family",
+      poster: apiData.poster_url || apiData.image_url || "/funeral2.jpg",
+      livestream: apiData.livestream_url,
+      isUpcoming: apiData.funeral_date ? new Date(apiData.funeral_date) > new Date() : false,
+      condolences: apiData.condolences_count || 0,
+      donations: apiData.donations_total || 0,
+      views: apiData.views_count || apiData.view_count || 0,
+    };
+  };
+
+  useEffect(() => {
+    async function fetchFunerals() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/funerals/featured");
+        const result = await res.json();
+        
+        if (!res.ok)
+          throw new Error(result.error || "Failed to fetch funerals");
+        
+        // Transform the data to match FuneralCard expectations
+        const transformedFunerals = (result.data || []).map(transformFuneralData);
+        setFunerals(transformedFunerals);
+      } catch (err) {
+        console.error("Error fetching featured funerals:", err);
+        setError((err as Error).message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchFunerals();
+  }, []);
 
   return (
     <section className="py-20 bg-gradient-to-br from-white to-slate-50">
@@ -101,11 +76,11 @@ export function FuneralDirectory() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-            Recent Funeral Services
+            Featured Funeral Services
           </h2>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-            Browse and connect with funeral services across Ghana. Leave
-            condolences, share memories, and show support.
+            Highlighted memorial services across Ghana. Browse, leave
+            condolences, share memories, and show support to grieving families.
           </p>
 
           <Button
@@ -120,19 +95,45 @@ export function FuneralDirectory() {
         </motion.div>
 
         {/* Funeral Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {funerals.map((funeral, index) => (
-            <motion.div
-              key={funeral.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              <FuneralCard funeral={funeral} />
-            </motion.div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12 text-slate-500">
+            Loading funerals...
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 text-red-500">Error: {error}</div>
+        ) : funerals.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            No featured funerals found.
+            <div className="mt-4 text-sm">
+              <p>Debug info: {JSON.stringify({ funeralsLength: funerals.length })}</p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {/* Debug info */}
+            <div className="mb-4 p-4 bg-gray-100 rounded text-sm">
+              <p>Found {funerals.length} featured funerals</p>
+              <details>
+                <summary>Debug data</summary>
+                <pre>{JSON.stringify(funerals[0], null, 2)}</pre>
+              </details>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {funerals.map((funeral, index) => (
+                <motion.div
+                  key={funeral.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <FuneralCard funeral={funeral} />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Call to Action */}
         <motion.div

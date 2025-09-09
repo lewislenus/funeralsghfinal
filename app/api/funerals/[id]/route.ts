@@ -1,22 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { funeralsAPI } from "@/lib/api/funerals";
+import { funeralsAPI } from '@/lib/api/funerals';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/supabase/types';
+import { cookies, headers } from 'next/headers';
+import { getServiceRoleKey } from './detectEnv';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const result = await funeralsAPI.getFuneral(params.id);
+    const { data, error } = await funeralsAPI.getFuneral(params.id);
 
-    if (result.error) {
+    if (error) {
       return NextResponse.json(
-        { error: result.error },
-        { status: result.error === "Funeral not found" ? 404 : 500 }
+        { error: error },
+        { status: 404 }
       );
     }
 
     return NextResponse.json({
-      data: result.data,
+      data,
       success: true,
     });
   } catch (error) {
@@ -32,45 +36,100 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const body = await request.json();
-    const { status } = body;
+    console.log("PATCH request received for funeral ID:", params.id);
 
-    if (!status) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!params.id) {
+      return NextResponse.json({ error: "Missing funeral ID" }, { status: 400 });
     }
 
-    // Validate status is one of the allowed values
-    const validStatuses = [
-      "draft",
-      "pending",
-      "approved",
-      "rejected",
-      "completed",
-    ];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: "Invalid status value" },
-        { status: 400 }
-      );
+    const body = await request.json().catch(() => ({}));
+    const { status, featured } = body as { status?: string; featured?: boolean };
+
+    if (!status && typeof featured !== 'boolean') {
+      return NextResponse.json({ error: "Provide status or featured" }, { status: 400 });
     }
 
-    const result = await funeralsAPI.updateFuneral(params.id, { status });
+    const updates: { status?: string; featured?: boolean } = {};
+    if (status) {
+      const validStatuses = ["draft", "pending", "approved", "rejected", "completed"];
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+      updates.status = status;
+    }
+    if (typeof featured === 'boolean') updates.featured = featured;
 
-    if (result.error) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const serviceKey = getServiceRoleKey(); // Use our helper function
+
+    if (!url || !anonKey) {
+      return NextResponse.json({ error: 'Supabase env vars missing' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      data: result.data,
-      success: true,
+    // Log which key we're using
+    console.log("Using service key:", !!serviceKey);
+
+    // Build client (service preferred)
+    let client = createClient<Database>(url, serviceKey || anonKey, { 
+      auth: { persistSession: false },
+      // Add extra options for debugging
+      global: {
+        fetch: (...args) => {
+          // @ts-ignore - we know fetch is available
+          return fetch(...args);
+        }
+      }
     });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+
+    // Validate UUID format
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+    
+    if (!isUuid) {
+      return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
+    }
+    
+    console.log("PATCH: Processing UUID:", params.id);
+    
+    let { data, error } = await client
+      .from('funerals')
+      .update(updates)
+      .eq('id', params.id)
+      .select('*')
+      .maybeSingle();
+
+    // If RLS / permission error without service key, give clearer guidance
+    if (error) {
+      const msg = error.message?.toLowerCase() || '';
+      const permissionLike = msg.includes('permission') || msg.includes('rls');
+      if (permissionLike && !serviceKey) {
+        return NextResponse.json({
+          error: 'Permission denied by Row Level Security. Add SUPABASE_SERVICE_ROLE_KEY to .env.local or log in as an admin user whose profile.role = "admin".'
+        }, { status: 403 });
+      }
+      console.error('Supabase update error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      // Existence check
+      const { data: exists, error: existsErr } = await client
+        .from('funerals')
+        .select('id')
+        .eq('id', params.id)
+        .maybeSingle();
+      if (existsErr) {
+        return NextResponse.json({ error: 'Unable to verify update (RLS?)' }, { status: 403 });
+      }
+      if (!exists) {
+        return NextResponse.json({ error: 'Funeral not found' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Update blocked by RLS. Supply service role key.' }, { status: 403 });
+    }
+
+    return NextResponse.json({ data, success: true });
+  } catch (e) {
+    console.error('Unexpected PATCH error:', e);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

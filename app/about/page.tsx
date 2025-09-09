@@ -68,7 +68,7 @@ export default function AboutPage() {
   const milestones = [
     {
       year: "2023",
-      event: "FuneralsGhana founded with a vision to digitize funeral services",
+      event: "damarifadue founded with a vision to digitize funeral services",
     },
     { year: "2023", event: "First 100 families joined our platform" },
     { year: "2024", event: "Expanded to all 16 regions of Ghana" },
@@ -97,7 +97,7 @@ export default function AboutPage() {
               <h1 className="text-5xl md:text-6xl font-bold mb-6">
                 About{" "}
                 <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-                  FuneralsGhana
+                  damarifadue
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-slate-300 leading-relaxed mb-8">
@@ -150,7 +150,7 @@ export default function AboutPage() {
                     while embracing modern convenience.
                   </p>
                   <p className="text-lg text-slate-600 leading-relaxed mb-8">
-                    FuneralsGhana was born from the understanding that every
+                    damarifadue was born from the understanding that every
                     life deserves to be celebrated with dignity, and every
                     family deserves support during their time of grief. We're
                     here to bridge distances, preserve memories, and ensure that

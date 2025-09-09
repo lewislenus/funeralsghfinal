@@ -30,17 +30,19 @@ import {
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { handleApiError } from "./error-handlers";
 
 type PendingFuneral = {
   id: string;
-  user_id: string;
+  user_id: string | null;
   deceased_name: string;
   created_at: string;
   donations_total: number;
   donations_count: number;
   organizer: string;
-  funeral_date?: string;
+  funeral_date?: string | null;
   status: string;
+  featured: boolean;
 };
 
 export default function AdminDashboard() {
@@ -74,51 +76,85 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user || user.email !== "funeralsghana@gmail.com") {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error("Authentication error:", error.message);
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again.",
+            variant: "destructive",
+          });
+          router.push("/login");
+          return;
+        }
+        
+        if (!user) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to access the admin dashboard.",
+            variant: "destructive",
+          });
+          router.push("/login");
+          return;
+        }
+        
+        if (user.email !== "funeralsghana@gmail.com") {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access the admin dashboard.",
+            variant: "destructive",
+          });
+          router.push("/");
+          return;
+        }
+      } catch (err) {
+        console.error("Admin check error:", err);
         router.push("/login");
-        return;
       }
     };
     checkAdmin();
-  }, [router]);
+  }, [router, toast]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       const supabase = createClient();
+      
+      // Use the funeralsAPI to get admin funerals
+      const { data: funerals, error: funeralsError } = await funeralsAPI.getAdminFunerals();
 
-      // Fetch all funerals with detailed information
-      const { data: funerals, error: funeralsError } = await supabase
-        .from("funerals")
-        .select(
-          "id, status, deceased_name, user_id, created_at, funeral_date, organizer_name, donations_total, donations (count)"
-        )
-        .order("created_at", { ascending: false });
+      // Fetch additional data in parallel
+      const [usersResult, donationsResult, flaggedResult] = await Promise.all([
+        supabase.from("profiles").select("id"),
+        supabase.from("donations").select("amount"),
+        supabase
+          .from("condolences")
+          .select("id, message, author_name, funeral_id, is_approved, created_at")
+          .eq("is_approved", false),
+      ]);
 
-      const { data: users } = await supabase.from("profiles").select("id");
-      const { data: donations } = await supabase
-        .from("donations")
-        .select("amount");
-      const { data: flagged } = await supabase
-        .from("condolences")
-        .select("id, message, author_name, funeral_id, is_approved, created_at")
-        .eq("is_approved", false);
+      const users = usersResult.data;
+      const donations = donationsResult.data;
+      const flagged = flaggedResult.data;
 
       // Set funerals
-      if (funerals) {
+      if (Array.isArray(funerals)) {
         const allFunerals = funerals.map((funeral) => ({
-          id: funeral.id,
-          user_id: funeral.user_id,
+          id: funeral.id.toString(),
+          user_id: funeral.user_id || "",
           deceased_name: funeral.deceased_name,
-          created_at: funeral.created_at,
+          created_at: funeral.created_at || new Date().toISOString(),
           funeral_date: funeral.funeral_date,
-          organizer: funeral.organizer_name,
+          organizer: funeral.family_name || "Not specified",
           donations_total: funeral.donations_total || 0,
-          donations_count: funeral.donations?.[0]?.count || 0,
-          status: funeral.status,
+          donations_count: funeral.donations_count || 0,
+          status: funeral.status || "pending",
+          featured: Boolean(funeral.featured || false),
         }));
         setPendingFunerals(allFunerals);
         setPendingCount(
@@ -129,7 +165,7 @@ export default function AdminDashboard() {
       // Calculate stats
       setStats({
         totalUsers: users?.length || 0,
-        totalFunerals: funerals?.length || 0,
+        totalFunerals: Array.isArray(funerals) ? funerals.length : 0,
         flaggedContent: flagged?.length || 0,
         totalDonations:
           donations?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0,
@@ -145,14 +181,11 @@ export default function AdminDashboard() {
 
   const handleApproveFuneral = async (id: string) => {
     try {
-      const response = await fetch(`/api/funerals/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
-      });
+      // Call the API to update the status to approved
+      const { error } = await funeralsAPI.updateFuneral(id, { status: "approved" });
 
-      if (!response.ok) {
-        throw await response.json();
+      if (error) {
+        throw new Error(error);
       }
 
       toast({
@@ -161,16 +194,26 @@ export default function AdminDashboard() {
         variant: "default",
       });
 
-      // Refresh the data
-      const supabase = createClient();
-      const { data: funerals } = await supabase
-        .from("funerals")
-        .select()
-        .order("created_at", { ascending: false });
+      // Refresh the funeral data
+      const { data: funerals } = await funeralsAPI.getAdminFunerals();
 
-      if (funerals) {
-        setPendingFunerals(funerals);
-        setPendingCount(funerals.filter((f) => f.status === "pending").length);
+      if (Array.isArray(funerals)) {
+        const allFunerals = funerals.map((funeral) => ({
+          id: funeral.id.toString(),
+          user_id: funeral.user_id || "",
+          deceased_name: funeral.deceased_name,
+          created_at: funeral.created_at || new Date().toISOString(),
+          funeral_date: funeral.funeral_date,
+          organizer: funeral.family_name || "Not specified",
+          donations_total: funeral.donations_total || 0,
+          donations_count: funeral.donations_count || 0,
+          status: funeral.status || "pending",
+          featured: Boolean(funeral.featured || false),
+        }));
+        setPendingFunerals(allFunerals);
+        setPendingCount(
+          allFunerals.filter((f) => f.status === "pending").length
+        );
       }
     } catch (error) {
       console.error("Error approving funeral:", error);
@@ -184,14 +227,11 @@ export default function AdminDashboard() {
 
   const handleRejectFuneral = async (id: string) => {
     try {
-      const response = await fetch(`/api/funerals/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected" }),
-      });
+      // Call the API to update the status to rejected
+      const { error } = await funeralsAPI.updateFuneral(id, { status: "rejected" });
 
-      if (!response.ok) {
-        throw await response.json();
+      if (error) {
+        throw new Error(error);
       }
 
       toast({
@@ -200,16 +240,26 @@ export default function AdminDashboard() {
         variant: "default",
       });
 
-      // Refresh the data
-      const supabase = createClient();
-      const { data: funerals } = await supabase
-        .from("funerals")
-        .select()
-        .order("created_at", { ascending: false });
+      // Refresh the funeral data
+      const { data: funerals } = await funeralsAPI.getAdminFunerals();
 
-      if (funerals) {
-        setPendingFunerals(funerals);
-        setPendingCount(funerals.filter((f) => f.status === "pending").length);
+      if (Array.isArray(funerals)) {
+        const allFunerals = funerals.map((funeral) => ({
+          id: funeral.id.toString(),
+          user_id: funeral.user_id || "",
+          deceased_name: funeral.deceased_name,
+          created_at: funeral.created_at || new Date().toISOString(),
+          funeral_date: funeral.funeral_date,
+          organizer: funeral.family_name || "Not specified",
+          donations_total: funeral.donations_total || 0,
+          donations_count: funeral.donations_count || 0,
+          status: funeral.status || "pending",
+          featured: Boolean(funeral.featured || false),
+        }));
+        setPendingFunerals(allFunerals);
+        setPendingCount(
+          allFunerals.filter((f) => f.status === "pending").length
+        );
       }
     } catch (error) {
       console.error("Error rejecting funeral:", error);

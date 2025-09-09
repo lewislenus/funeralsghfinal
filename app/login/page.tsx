@@ -78,7 +78,7 @@ export default function LoginPage() {
                     </span>
                     <br />
                     <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      FuneralsGhana
+                      damarifadue
                     </span>
                   </h1>
 

@@ -23,13 +23,13 @@ export function Header() {
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105">
-                <span className="text-white font-bold text-xl">FG</span>
+                <span className="text-white font-bold text-xl">D</span>
               </div>
               <div className="absolute -inset-1 bg-gradient-to-br from-amber-500 to-red-600 rounded-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-300 blur-sm"></div>
             </div>
             <div className="hidden sm:block">
               <span className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
-                FuneralsGhana
+                damarifadue
               </span>
               <p className="text-xs text-slate-500 -mt-1 font-medium">Honoring Lives with Dignity</p>
             </div>

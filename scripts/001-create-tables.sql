@@ -36,7 +36,7 @@ CREATE TABLE public.funerals (
     venue TEXT NOT NULL,
     region TEXT NOT NULL,
     location TEXT NOT NULL,
-    coordinates JSONB, -- {lat: number, lng: number}
+
     
     -- Family information
     family_name TEXT NOT NULL,

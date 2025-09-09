@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "prebuild": "node scripts/copy-pdf-worker.js",
+    "dev": "node scripts/copy-pdf-worker.js && next dev",
     "lint": "next lint",
     "start": "next start"
   },
@@ -51,9 +52,11 @@
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
     "next-themes": "latest",
+    "pdfjs-dist": "^4.8.69",
     "react": "^18",
     "react-day-picker": "latest",
     "react-dom": "^18",
+    "react-fast-marquee": "^1.6.5",
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",

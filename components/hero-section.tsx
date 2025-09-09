@@ -2,13 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Heart, Users, Shield, Play, Star } from "lucide-react";
+import Marquee from "react-fast-marquee";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
 export function HeroSection() {
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden">
+    <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-amber-50"></div>
@@ -136,152 +137,35 @@ export function HeroSection() {
                   </Link>
                 </Button>
               </motion.div>
-
-              {/* Trust Indicators */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.9 }}
-                className="grid grid-cols-3 gap-8 pt-12 border-t border-slate-200"
-              >
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-800 mb-2">
-                    500+
-                  </div>
-                  <div className="text-sm text-slate-600 font-medium">
-                    Families Served
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-800 mb-2">
-                    10K+
-                  </div>
-                  <div className="text-sm text-slate-600 font-medium">
-                    Condolences Shared
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-800 mb-2">
-                    ₵50K+
-                  </div>
-                  <div className="text-sm text-slate-600 font-medium">
-                    Support Raised
-                  </div>
-                </div>
-              </motion.div>
             </motion.div>
 
-            {/* Right Content - Interactive Demo */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="relative"
-            >
-              <div className="relative z-10">
-                {/* Main Demo Card */}
-                <motion.div
-                  whileHover={{ y: -10, scale: 1.02 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border border-slate-100"
-                >
-                  <div className="flex items-center space-x-6 mb-8">
-                    <div className="relative">
+            {/* Right Content - Scrolling Images */}
+            <div className="w-full h-full flex items-center justify-center overflow-hidden">
+              <Marquee pauseOnHover={true} speed={40} gradient={false}>
+                <div className="flex space-x-6 py-4">
+                  {[
+                    "/funeral1.jpg",
+                    "/funeral2.jpg",
+                    "/funeral3.jpg",
+                    "/funeral4.jpg",
+                    "/funeral5.jpg",
+                  ].map((src, index) => (
+                    <div key={index} className="w-80 h-[480px] flex-shrink-0">
                       <Image
-                        src="/funeral1.jpg"
-                        alt="Profile"
-                        width={80}
-                        height={80}
-                        className="w-20 h-20 rounded-2xl object-cover"
+                        src={src}
+                        alt={`Funeral scene ${index + 1}`}
+                        width={320}
+                        height={480}
+                        className="w-full h-full object-cover rounded-3xl shadow-2xl border-4 border-white"
                       />
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full border-3 border-white flex items-center justify-center">
-                        <Heart className="w-4 h-4 text-white" />
-                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-slate-800">
-                        Kwame Asante
-                      </h3>
-                      <p className="text-slate-600 text-lg">1945 - 2024</p>
-                      <p className="text-amber-600 font-semibold">
-                        Beloved Teacher & Leader
-                      </p>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              </Marquee>
+            </div>
 
-                  <p className="text-slate-600 mb-8 leading-relaxed">
-                    A dedicated educator who touched thousands of lives across
-                    Ghana. His legacy of wisdom and compassion continues to
-                    inspire...
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-6 mb-8">
-                    <div className="flex items-center space-x-3 text-slate-600">
-                      <Users className="w-5 h-5 text-blue-500" />
-                      <span className="font-medium">23 condolences</span>
-                    </div>
-                    <div className="flex items-center space-x-3 text-slate-600">
-                      <Heart className="w-5 h-5 text-red-500" />
-                      <span className="font-medium">₵5,420 raised</span>
-                    </div>
-                  </div>
-
-                  <Button className="w-full bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white rounded-xl py-3 font-semibold">
-                    View Memorial
-                  </Button>
-                </motion.div>
-
-                {/* Floating Feature Cards */}
-                <motion.div
-                  animate={{
-                    y: [0, -10, 0],
-                    rotate: [0, 1, 0],
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }}
-                  className="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl p-6 w-64 border border-slate-100"
-                >
-                  <div className="flex items-center space-x-3 mb-3">
-                    <Shield className="w-6 h-6 text-green-500" />
-                    <span className="font-semibold text-slate-700">
-                      Secure & Private
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-600">
-                    Bank-level security protects your donations and personal
-                    messages.
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  animate={{
-                    y: [0, 8, 0],
-                    rotate: [0, -1, 0],
-                  }}
-                  transition={{
-                    duration: 5,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                    delay: 1,
-                  }}
-                  className="absolute -bottom-6 -left-6 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl shadow-xl p-6 w-56"
-                >
-                  <div className="text-2xl font-bold mb-2">24/7</div>
-                  <p className="text-amber-100 font-medium">
-                    Support Available
-                  </p>
-                  <p className="text-sm text-amber-200 mt-2">
-                    Always here when families need us most
-                  </p>
-                </motion.div>
-              </div>
-
-              {/* Background Decoration */}
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-200 to-red-200 rounded-[3rem] transform rotate-3 scale-105 opacity-20 blur-sm"></div>
-            </motion.div>
+            {/* Background Decoration */}
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-200 to-red-200 rounded-[3rem] transform rotate-3 scale-105 opacity-20 blur-sm"></div>
           </div>
         </div>
       </div>
