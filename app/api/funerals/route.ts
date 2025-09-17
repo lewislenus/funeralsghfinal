@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { funeralsAPI, type FuneralFilters } from "@/lib/api/funerals"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
