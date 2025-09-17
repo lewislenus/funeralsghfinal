@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import ErrorBoundary from './error-boundary'
+import { BrochureViewerProvider } from '@/components/brochure-viewer-provider'
 import '@/lib/init-storage'
 
 export const metadata: Metadata = {
@@ -19,8 +20,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ErrorBoundary>
-          {children}
-          <Toaster />
+          <BrochureViewerProvider>
+            {children}
+            <Toaster />
+          </BrochureViewerProvider>
         </ErrorBoundary>
       </body>
     </html>

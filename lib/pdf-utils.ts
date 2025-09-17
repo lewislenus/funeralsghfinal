@@ -24,7 +24,8 @@ export async function configurePdfWorker(): Promise<boolean> {
     
     // Use a direct import instead of CDN for more reliability
     // For Next.js, this is the most reliable approach as it bundles the worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+  // Prefer local worker shipped in public/ for Next.js
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
     
     return true;
   } catch (err) {
@@ -53,7 +54,7 @@ export async function loadPdf(url: string): Promise<{pdf: any, numPages: number}
       }
     }
     
-    try {
+  try {
       // Load the PDF
       const loadingTask = pdfjsLib.getDocument(pdfUrl);
       const pdfDoc = await loadingTask.promise;
@@ -68,7 +69,7 @@ export async function loadPdf(url: string): Promise<{pdf: any, numPages: number}
         // Convert the URL to a download URL
         const downloadUrl = url.replace('/raw/upload/', '/image/upload/fl_attachment/');
         
-        try {
+  try {
           const loadingTask = pdfjsLib.getDocument(downloadUrl);
           const pdfDoc = await loadingTask.promise;
           
@@ -83,11 +84,6 @@ export async function loadPdf(url: string): Promise<{pdf: any, numPages: number}
         throw error;
       }
     }
-    
-    return {
-      pdf,
-      numPages: pdf.numPages
-    };
   } catch (error: any) {
     console.error('PDF loading error:', error);
     return {

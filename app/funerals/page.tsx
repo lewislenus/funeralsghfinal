@@ -208,7 +208,7 @@ export default function FuneralsPage() {
                 <span>
                   {
                     funerals.filter(
-                      (f) => new Date(f.funeral_date) >= new Date()
+                      (f) => f.funeral_date && new Date(f.funeral_date) >= new Date()
                     ).length
                   }{" "}
                   Upcoming Services
@@ -403,42 +403,128 @@ export default function FuneralsPage() {
               </Button>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {funerals.map((funeral, index) => (
-                <motion.div
-                  key={funeral.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                >
-                  <FuneralCard
-                    funeral={{
-                      id: funeral.id,
-                      deceased: {
-                        name: funeral.deceased_name,
-                        photo: funeral.deceased_photo_url || "/funeral1.jpg",
-                        dob: funeral.date_of_birth,
-                        dod: funeral.date_of_death,
-                        biography: funeral.biography || "",
-                      },
-                      funeral: {
-                        date: funeral.funeral_date,
-                        time: funeral.funeral_time,
-                        venue: funeral.venue,
-                        region: funeral.region,
-                        location: funeral.location,
-                      },
-                      family: funeral.family_name,
-                      poster: funeral.poster_url || "/funeral2.jpg",
-                      livestream: funeral.livestream_url,
-                      isUpcoming: new Date(funeral.funeral_date) >= new Date(),
-                      condolences: funeral.condolences_count,
-                      donations: funeral.donations_total,
-                      views: funeral.views_count,
-                    }}
-                  />
-                </motion.div>
-              ))}
+            <div className="space-y-16">
+              {(() => {
+                // Group funerals by upcoming and past
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const upcomingFunerals = funerals.filter(funeral => {
+                  if (!funeral.funeral_date) return false;
+                  const funeralDate = new Date(funeral.funeral_date);
+                  return funeralDate >= today;
+                });
+                
+                const pastFunerals = funerals.filter(funeral => {
+                  if (!funeral.funeral_date) return false;
+                  const funeralDate = new Date(funeral.funeral_date);
+                  return funeralDate < today;
+                });
+
+                const renderFuneralGrid = (funeralsList: typeof funerals, startIndex: number = 0) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {funeralsList.map((funeral, index) => (
+                      <motion.div
+                        key={funeral.id}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: (startIndex + index) * 0.1 }}
+                      >
+                        <FuneralCard
+                          funeral={{
+                            id: funeral.id,
+                            deceased: {
+                              name: funeral.deceased_name,
+                              photo: funeral.deceased_photo_url || "/funeral1.jpg",
+                              dob: funeral.date_of_birth || "",
+                              dod: funeral.date_of_death || "",
+                              biography: funeral.biography || "",
+                            },
+                            funeral: {
+                              date: funeral.funeral_date || "",
+                              time: funeral.funeral_time || "",
+                              venue: funeral.venue || "",
+                              region: funeral.region || "",
+                              location: funeral.location || "",
+                            },
+                            family: funeral.family_name || "",
+                            poster: funeral.poster_url || "/funeral2.jpg",
+                            livestream: funeral.livestream_url,
+                            isUpcoming: funeral.funeral_date ? new Date(funeral.funeral_date) >= new Date() : false,
+                            condolences: funeral.condolences_count,
+                            donations: funeral.donations_total,
+                            views: funeral.views_count || 0,
+                          }}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                );
+
+                return (
+                  <>
+                    {/* Upcoming Services Section */}
+                    {upcomingFunerals.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <div className="flex items-center mb-8">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-slate-800">
+                              Upcoming Services
+                            </h2>
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                              {upcomingFunerals.length} event{upcomingFunerals.length !== 1 ? 's' : ''}
+                            </Badge>
+                          </div>
+                        </div>
+                        {renderFuneralGrid(upcomingFunerals, 0)}
+                      </motion.div>
+                    )}
+
+                    {/* Past Services Section */}
+                    {pastFunerals.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: upcomingFunerals.length * 0.1 }}
+                      >
+                        <div className="flex items-center mb-8">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 bg-slate-400 rounded-full"></div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-slate-600">
+                              Past Services
+                            </h2>
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
+                              {pastFunerals.length} event{pastFunerals.length !== 1 ? 's' : ''}
+                            </Badge>
+                          </div>
+                        </div>
+                        {renderFuneralGrid(pastFunerals, upcomingFunerals.length)}
+                      </motion.div>
+                    )}
+
+                    {/* Show message if only one type exists */}
+                    {upcomingFunerals.length === 0 && pastFunerals.length > 0 && (
+                      <div className="text-center py-8 mb-8">
+                        <p className="text-slate-600 bg-blue-50 border border-blue-200 rounded-xl p-4 inline-block">
+                          No upcoming services found. Showing past services only.
+                        </p>
+                      </div>
+                    )}
+                    {pastFunerals.length === 0 && upcomingFunerals.length > 0 && (
+                      <div className="text-center py-8 mb-8">
+                        <p className="text-slate-600 bg-green-50 border border-green-200 rounded-xl p-4 inline-block">
+                          All services are upcoming. No past services to display.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

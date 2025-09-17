@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
-import "pdfjs-dist/web/pdf_viewer.css";
+// import "pdfjs-dist/web/pdf_viewer.css"; // Commented out to avoid Next.js CSS loading issues
 import { configurePdfWorker, loadPdf } from "@/lib/pdf-utils";
 import { isCloudinaryRawUrl, getDownloadUrl } from "@/lib/cloudinary-utils";
 

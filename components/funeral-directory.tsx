@@ -53,7 +53,18 @@ export function FuneralDirectory() {
         
         // Transform the data to match FuneralCard expectations
         const transformedFunerals = (result.data || []).map(transformFuneralData);
-        setFunerals(transformedFunerals);
+        
+        // Filter to only show upcoming funerals (exclude past events)
+        const upcomingFunerals = transformedFunerals.filter((funeral: any) => {
+          if (!funeral.funeral.date) return false; // Skip funerals without a date
+          const funeralDate = new Date(funeral.funeral.date);
+          const today = new Date();
+          // Set today to start of day to include events happening today
+          today.setHours(0, 0, 0, 0);
+          return funeralDate >= today;
+        });
+        
+        setFunerals(upcomingFunerals);
       } catch (err) {
         console.error("Error fetching featured funerals:", err);
         setError((err as Error).message || "Unknown error");
@@ -76,10 +87,10 @@ export function FuneralDirectory() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-            Featured Funeral Services
+            Upcoming Funeral Services
           </h2>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-            Highlighted memorial services across Ghana. Browse, leave
+            Upcoming memorial services across Ghana. Browse, leave
             condolences, share memories, and show support to grieving families.
           </p>
 
@@ -103,35 +114,21 @@ export function FuneralDirectory() {
           <div className="text-center py-12 text-red-500">Error: {error}</div>
         ) : funerals.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
-            No featured funerals found.
-            <div className="mt-4 text-sm">
-              <p>Debug info: {JSON.stringify({ funeralsLength: funerals.length })}</p>
-            </div>
+            No upcoming funerals found.
           </div>
         ) : (
-          <div>
-            {/* Debug info */}
-            <div className="mb-4 p-4 bg-gray-100 rounded text-sm">
-              <p>Found {funerals.length} featured funerals</p>
-              <details>
-                <summary>Debug data</summary>
-                <pre>{JSON.stringify(funerals[0], null, 2)}</pre>
-              </details>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {funerals.map((funeral, index) => (
-                <motion.div
-                  key={funeral.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <FuneralCard funeral={funeral} />
-                </motion.div>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {funerals.map((funeral, index) => (
+              <motion.div
+                key={funeral.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <FuneralCard funeral={funeral} />
+              </motion.div>
+            ))}
           </div>
         )}
 

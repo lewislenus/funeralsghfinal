@@ -6,8 +6,19 @@ import Marquee from "react-fast-marquee";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { TypewriterText } from "./typewriter-text";
 
 export function HeroSection() {
+  const headerTexts = [
+    "Honor Lives,\nShare Memories",
+    "Celebrate Memories,\nShare Stories", 
+    "Preserve Legacies,\nShare Love",
+    "Remember Heroes,\nShare Tributes",
+    "Cherish Moments,\nShare Condolences",
+    "Honor Ancestors,\nShare Support",
+    "Treasure Lives,\nShare Hope"
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Animated Background */}
@@ -86,13 +97,13 @@ export function HeroSection() {
                   transition={{ duration: 0.8, delay: 0.3 }}
                   className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight"
                 >
-                  <span className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
-                    Honor Lives,
-                  </span>
-                  <br />
-                  <span className="bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 bg-clip-text text-transparent">
-                    Share Memories
-                  </span>
+                  <TypewriterText 
+                    texts={headerTexts}
+                    typeSpeed={80}
+                    deleteSpeed={50}
+                    pauseDuration={3000}
+                    className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent"
+                  />
                 </motion.h1>
 
                 <motion.p
@@ -156,6 +167,8 @@ export function HeroSection() {
                         alt={`Funeral scene ${index + 1}`}
                         width={320}
                         height={480}
+                        priority={index === 0}
+                        sizes="(max-width: 768px) 70vw, 320px"
                         className="w-full h-full object-cover rounded-3xl shadow-2xl border-4 border-white"
                       />
                     </div>
@@ -165,7 +178,7 @@ export function HeroSection() {
             </div>
 
             {/* Background Decoration */}
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-200 to-red-200 rounded-[3rem] transform rotate-3 scale-105 opacity-20 blur-sm"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-200 to-red-200 rounded-[3rem] opacity-20 blur-sm"></div>
           </div>
         </div>
       </div>

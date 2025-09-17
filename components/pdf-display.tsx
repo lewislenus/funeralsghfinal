@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EnhancedPdfViewer } from "./enhanced-pdf-viewer";
 import { InlinePdfViewer } from "./inline-pdf-viewer";
+import PageFlipViewer from "./pageflip-viewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,10 +62,9 @@ export function PdfDisplay({
         </CardHeader>
         <CardContent>
           <p className="text-slate-600 mb-4">{description}</p>
-          <EnhancedPdfViewer
+          <PageFlipViewer
             pdfUrl={pdfUrl}
             title={title}
-            description={description}
             showInModal={true}
             autoOpen={false}
           />
@@ -102,6 +102,7 @@ export function PdfDisplay({
             description={description}
             showInModal={true}
             autoOpen={true}
+            suppressPreview={true}
             onClose={() => setShowModal(false)}
           />
         )}
@@ -122,7 +123,7 @@ export function PdfDisplay({
     );
   }
 
-  // Modal mode - button that opens full modal
+  // Modal mode - shows thumbnail preview with modal trigger
   if (mode === "modal") {
     return (
       <>
@@ -135,6 +136,19 @@ export function PdfDisplay({
           </CardHeader>
           <CardContent>
             <p className="text-slate-600 mb-4">{description}</p>
+            
+            {/* PDF Thumbnail Preview */}
+            <div className="mb-4">
+              <InlinePdfViewer 
+                pdfUrl={pdfUrl}
+                title={title}
+                className="w-full"
+                showPreview={true}
+                height="300px"
+                onThumbnailClick={() => setShowModal(true)}
+              />
+            </div>
+            
             <Button onClick={() => setShowModal(true)} className="w-full">
               <Eye className="w-4 h-4 mr-2" />
               View PDF
@@ -149,6 +163,7 @@ export function PdfDisplay({
             description={description}
             showInModal={true}
             autoOpen={true}
+            suppressPreview={true}
             onClose={() => setShowModal(false)}
           />
         )}
@@ -200,6 +215,7 @@ export function PdfDisplay({
             description={description}
             showInModal={true}
             autoOpen={true}
+            suppressPreview={true}
             onClose={() => setShowModal(false)}
           />
         )}

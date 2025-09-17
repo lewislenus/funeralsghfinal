@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { funeralsAPI } from "@/lib/api/funerals";
+import { brochureAPI } from "@/lib/api/brochure";
+import { AdminBrochureUpload } from "@/components/admin-brochure-upload";
 import { toast } from "@/components/ui/use-toast";
 import {
   Shield,
@@ -26,6 +28,9 @@ import {
   TrendingUp,
   Clock,
   BarChart3,
+  Upload,
+  BookOpen,
+  Plus,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -63,6 +68,8 @@ export default function AdminDashboard() {
   const [pendingFunerals, setPendingFunerals] = useState<PendingFuneral[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedFuneralForBrochure, setSelectedFuneralForBrochure] = useState<string | null>(null);
+  const [funeralBrochures, setFuneralBrochures] = useState<Record<string, any[]>>({});
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalFunerals: 0,
@@ -271,6 +278,34 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleBrochureUpload = async (funeralId: string) => {
+    setSelectedFuneralForBrochure(funeralId);
+    
+    // Load existing brochures for this funeral
+    try {
+      const { data: brochures, error } = await brochureAPI.getBrochuresForFuneral(funeralId);
+      if (!error && brochures) {
+        setFuneralBrochures(prev => ({ ...prev, [funeralId]: brochures }));
+      }
+    } catch (error) {
+      console.error("Error loading brochures:", error);
+    }
+  };
+
+  const handleBrochureUploadComplete = async () => {
+    if (selectedFuneralForBrochure) {
+      // Reload brochures for the selected funeral
+      try {
+        const { data: brochures, error } = await brochureAPI.getBrochuresForFuneral(selectedFuneralForBrochure);
+        if (!error && brochures) {
+          setFuneralBrochures(prev => ({ ...prev, [selectedFuneralForBrochure]: brochures }));
+        }
+      } catch (error) {
+        console.error("Error reloading brochures:", error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <Header />
@@ -402,129 +437,213 @@ export default function AdminDashboard() {
             transition={{ delay: 0.2 }}
             className="space-y-6"
           >
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-2xl">All Funerals</CardTitle>
-                <p className="text-slate-600">
-                  View and manage all funeral listings
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {isLoading ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500" />
-                    </div>
-                  ) : pendingFunerals.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                      <h3 className="text-xl font-medium text-slate-600">
-                        No funerals found
-                      </h3>
-                      <p className="text-slate-500 mt-2">
-                        No funeral listings have been created yet.
-                      </p>
-                    </div>
-                  ) : (
-                    pendingFunerals.map((funeral) => (
-                      <motion.div
-                        key={funeral.id}
-                        whileHover={{ scale: 1.02 }}
-                        className="flex items-center justify-between p-6 border border-slate-200 rounded-2xl bg-white/50 hover:bg-white/80 transition-all duration-300"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-xl font-bold text-slate-800">
-                              {funeral.deceased_name}
-                            </h3>
-                            <Badge
-                              className={`rounded-full ${
-                                funeral.status === "approved"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : funeral.status === "pending"
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }`}
-                            >
-                              {funeral.status.charAt(0).toUpperCase() +
-                                funeral.status.slice(1)}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                Organized by
-                              </p>
-                              <p className="text-slate-800">
-                                {funeral.organizer || "Not specified"}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                Funeral Date
-                              </p>
-                              <p className="text-slate-800">
-                                {formatDate(funeral.funeral_date || "")}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                Donations
-                              </p>
-                              <p className="text-slate-800">
-                                ₵
-                                {(
-                                  funeral.donations_total || 0
-                                ).toLocaleString()}{" "}
-                                ({funeral.donations_count || 0} donations)
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500">Created</p>
-                              <p className="text-slate-800">
-                                {formatDate(funeral.created_at)}
-                              </p>
-                            </div>
-                          </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="overview">Funeral Management</TabsTrigger>
+                <TabsTrigger value="brochures">Brochure Management</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="space-y-6">
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">All Funerals</CardTitle>
+                    <p className="text-slate-600">
+                      View and manage all funeral listings
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {isLoading ? (
+                        <div className="flex justify-center items-center py-12">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500" />
                         </div>
-                        <div className="flex space-x-4">
-                          {funeral.status === "pending" && (
-                            <>
-                              <Button
-                                onClick={() => handleApproveFuneral(funeral.id)}
-                                variant="default"
-                                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Approve
-                              </Button>
-                              <Button
-                                onClick={() => handleRejectFuneral(funeral.id)}
-                                variant="outline"
-                                className="border-red-200 text-red-600 hover:bg-red-50"
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            onClick={() =>
-                              router.push(`/funeral/${funeral.id}`)
-                            }
-                            variant="outline"
-                            className="border-slate-200 text-slate-600 hover:bg-slate-50"
+                      ) : pendingFunerals.length === 0 ? (
+                        <div className="text-center py-12">
+                          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                          <h3 className="text-xl font-medium text-slate-600">
+                            No funerals found
+                          </h3>
+                          <p className="text-slate-500 mt-2">
+                            No funeral listings have been created yet.
+                          </p>
+                        </div>
+                      ) : (
+                        pendingFunerals.map((funeral) => (
+                          <motion.div
+                            key={funeral.id}
+                            whileHover={{ scale: 1.02 }}
+                            className="flex items-center justify-between p-6 border border-slate-200 rounded-2xl bg-white/50 hover:bg-white/80 transition-all duration-300"
                           >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h3 className="text-xl font-bold text-slate-800">
+                                  {funeral.deceased_name}
+                                </h3>
+                                <Badge
+                                  className={`rounded-full ${
+                                    funeral.status === "approved"
+                                      ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                      : funeral.status === "pending"
+                                      ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                      : "bg-red-100 text-red-800 hover:bg-red-200"
+                                  }`}
+                                >
+                                  {funeral.status.charAt(0).toUpperCase() +
+                                    funeral.status.slice(1)}
+                                </Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 mt-4">
+                                <div>
+                                  <p className="text-sm text-slate-500">
+                                    Organized by
+                                  </p>
+                                  <p className="text-slate-800">
+                                    {funeral.organizer || "Not specified"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">
+                                    Funeral Date
+                                  </p>
+                                  <p className="text-slate-800">
+                                    {formatDate(funeral.funeral_date || "")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">
+                                    Donations
+                                  </p>
+                                  <p className="text-slate-800">
+                                    ₵
+                                    {(
+                                      funeral.donations_total || 0
+                                    ).toLocaleString()}{" "}
+                                    ({funeral.donations_count || 0} donations)
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">Created</p>
+                                  <p className="text-slate-800">
+                                    {formatDate(funeral.created_at)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              {funeral.status === "pending" && (
+                                <>
+                                  <Button
+                                    onClick={() => handleApproveFuneral(funeral.id)}
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleRejectFuneral(funeral.id)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-red-200 text-red-600 hover:bg-red-50"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                onClick={() => handleBrochureUpload(funeral.id)}
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                              >
+                                <Upload className="w-4 h-4 mr-1" />
+                                Brochure
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  router.push(`/funeral/${funeral.id}`)
+                                }
+                                variant="outline"
+                                size="sm"
+                                className="border-slate-200 text-slate-600 hover:bg-slate-50"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="brochures" className="space-y-6">
+                {selectedFuneralForBrochure ? (
+                  <div className="space-y-6">
+                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-2xl flex items-center gap-2">
+                              <BookOpen className="w-6 h-6 text-blue-600" />
+                              Brochure Management
+                            </CardTitle>
+                            <p className="text-slate-600 mt-1">
+                              Upload and manage brochures for{" "}
+                              {pendingFunerals.find(f => f.id === selectedFuneralForBrochure)?.deceased_name}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => setSelectedFuneralForBrochure(null)}
+                          >
+                            Back to Funerals
                           </Button>
                         </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                      </CardHeader>
+                      <CardContent>
+                        <AdminBrochureUpload
+                          funeralId={selectedFuneralForBrochure}
+                          onUploadComplete={handleBrochureUploadComplete}
+                          existingBrochures={funeralBrochures[selectedFuneralForBrochure] || []}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Brochure Management</CardTitle>
+                      <p className="text-slate-600">
+                        Select a funeral to manage its brochures
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center py-12">
+                        <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                        <h3 className="text-xl font-medium text-slate-600">
+                          Select a Funeral
+                        </h3>
+                        <p className="text-slate-500 mt-2">
+                          Go to the Funeral Management tab and click the "Brochure" button next to any funeral to manage its brochures.
+                        </p>
+                        <Button
+                          onClick={() => setActiveTab("overview")}
+                          className="mt-4"
+                          variant="outline"
+                        >
+                          Go to Funeral Management
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </motion.div>
         </div>
       </main>

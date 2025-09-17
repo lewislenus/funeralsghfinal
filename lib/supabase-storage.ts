@@ -12,19 +12,18 @@ const supabase = createClientComponentClient();
 // Storage bucket configuration
 const STORAGE_CONFIG = {
   bucketName: "funeral-pdfs",
-  maxFileSize: 10 * 1024 * 1024, // 10MB
+  maxFileSize: 50 * 1024 * 1024, // 50MB (increased from 10MB)
   allowedMimeTypes: ["application/pdf"],
   
   // Public access settings
   public: true,
   
-  // File naming convention
+  // File naming convention - use general folder for all uploads to avoid RLS issues
   getFileName: (originalName: string, funeralId?: string) => {
     const timestamp = Date.now();
     const safeName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    return funeralId && funeralId !== 'new-funeral'
-      ? `funeral_${funeralId}/${timestamp}_${safeName}`
-      : `general/${timestamp}_${safeName}`;
+    // Use general folder for all uploads to avoid RLS path restrictions
+    return `general/${timestamp}_${safeName}`;
   }
 };
 
@@ -83,6 +82,18 @@ export async function uploadPdfToSupabase(
   const filePath = STORAGE_CONFIG.getFileName(file.name, funeralId);
 
   try {
+    // Diagnostic: log current user (helps with RLS debugging)
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.warn('Supabase auth getUser error (non-fatal for storage upload):', userError.message);
+      } else {
+        console.log('Uploading PDF as user:', user?.id || 'anonymous');
+      }
+    } catch (e) {
+      console.warn('Could not fetch user before upload (continuing):', (e as Error).message);
+    }
+
     // Upload file
     const { data, error } = await supabase.storage
       .from(STORAGE_CONFIG.bucketName)
@@ -92,6 +103,12 @@ export async function uploadPdfToSupabase(
       });
 
     if (error) {
+      // Enhance RLS error clarity
+      if (/row-level security/i.test(error.message)) {
+        throw new Error(
+          'Upload failed due to Storage RLS. Apply storage policies (see docs/STORAGE_RLS_FIX.md) to allow INSERT on bucket "funeral-pdfs" for authenticated users.'
+        );
+      }
       throw new Error(`Upload failed: ${error.message}`);
     }
 

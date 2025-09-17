@@ -21,6 +21,7 @@ interface InlinePdfViewerProps {
   className?: string;
   showPreview?: boolean;
   height?: string;
+  onThumbnailClick?: () => void;
 }
 
 export function InlinePdfViewer({ 
@@ -28,12 +29,14 @@ export function InlinePdfViewer({
   title = "Funeral Brochure",
   className = "",
   showPreview = true,
-  height = "500px"
+  height = "500px",
+  onThumbnailClick
 }: InlinePdfViewerProps) {
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("");
+
 
   const publicPdfUrl = getPublicPdfUrl(pdfUrl);
 
@@ -67,7 +70,8 @@ export function InlinePdfViewer({
           canvas.width = viewport.width;
           
           await page.render({ canvasContext: context, viewport }).promise;
-          setThumbnailUrl(canvas.toDataURL());
+          const dataUrl = canvas.toDataURL();
+          setThumbnailUrl(dataUrl);
         } catch (thumbError) {
           console.warn('Failed to generate thumbnail:', thumbError);
         }
@@ -159,17 +163,23 @@ export function InlinePdfViewer({
               <img 
                 src={thumbnailUrl} 
                 alt="PDF Preview" 
+                width={thumbnailUrl ? 300 : undefined}
+                height={thumbnailUrl ? 400 : undefined}
+                style={{ height: 'auto', width: '100%' }}
                 className="w-full h-auto rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={handleOpenExternal}
+                loading="lazy"
+                onClick={() => {
+                  if (onThumbnailClick) {
+                    onThumbnailClick();
+                  } else {
+                    handleOpenExternal();
+                  }
+                }}
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
                 <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <Button onClick={handleOpenExternal} className="w-full">
-              <Eye className="w-4 h-4 mr-2" />
-              View Full Document
-            </Button>
           </div>
         ) : (
           <div className="text-center py-8">

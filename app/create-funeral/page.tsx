@@ -14,7 +14,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { createClient } from '@/lib/supabase/client';
 import { uploadToCloudinary, uploadMultipleToCloudinary } from '@/lib/cloudinary';
-import { uploadPdf } from '@/lib/pdf-storage-manager';
+import { uploadPdfSmart } from '@/lib/pdf-storage-manager';
 
 const formSchema = z.object({
   deceased_name: z.string().min(1, 'Deceased name is required'),
@@ -62,6 +62,8 @@ function CreateFuneralContent() {
     register,
     handleSubmit,
     setValue,
+    getValues,
+    watch,
     formState: { errors },
     reset
   } = useForm<FormData>({
@@ -84,6 +86,17 @@ function CreateFuneralContent() {
       is_public: true
     }
   });
+
+  // Watch poster and cover URLs for auto-fill behavior
+  const posterUrl = watch('poster_url');
+  const coverUrl = watch('image_url');
+
+  // Auto-use poster as cover if cover is empty and poster becomes available (manual entry or upload)
+  useEffect(() => {
+    if (posterUrl && posterUrl.trim() !== '' && (!coverUrl || coverUrl.trim() === '')) {
+      setValue('image_url', posterUrl);
+    }
+  }, [posterUrl, coverUrl, setValue]);
 
   useEffect(() => {
     const fetchFuneralData = async () => {
@@ -185,6 +198,13 @@ function CreateFuneralContent() {
     try {
       const url = await uploadToCloudinary(file, "image");
       setValue(field, url);
+      // If this was the poster and no cover image is set, auto-use as cover
+      if (field === 'poster_url') {
+        const currentCover = getValues('image_url');
+        if (!currentCover || currentCover.trim() === '') {
+          setValue('image_url', url);
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(`Failed to upload ${field.replace('_', ' ')}. ${errorMessage}`);
@@ -223,9 +243,9 @@ function CreateFuneralContent() {
     setError(null);
 
     try {
-      // Use the new unified PDF storage manager (Supabase first, Cloudinary fallback)
-      const result = await uploadPdf(file, funeralId || 'new-funeral');
-      console.log("Uploaded PDF via", result.provider, "- URL:", result.url);
+      // Smart upload handles compression + provider selection (Cloudinary <=10MB, Supabase otherwise)
+      const result = await uploadPdfSmart(file, funeralId || 'new-funeral');
+      console.log("Uploaded PDF via", result.provider, "- URL:", result.url, result.compressionInfo ? `Compressed: ${(result.compressionInfo.compressionRatio*100).toFixed(1)}%` : 'No compression');
       setValue('brochure_url', result.url);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -358,6 +378,21 @@ function CreateFuneralContent() {
                     </div>
                     <div className="text-sm text-slate-500">Or enter URL manually:</div>
                     <Input {...register('poster_url')} placeholder="https://..." />
+                    {/* Use as cover photo button */}
+                    {posterUrl && posterUrl.trim() !== '' && (
+                      <div className="flex items-center space-x-3 pt-1">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setValue('image_url', posterUrl, { shouldDirty: true })}
+                        >
+                          Use as cover photo
+                        </Button>
+                        {coverUrl === posterUrl && (
+                          <span className="text-xs text-green-600">Poster is currently used as cover</span>
+                        )}
+                      </div>
+                    )}
                     {errors.poster_url && <p className="text-red-500 text-sm">{errors.poster_url.message}</p>}
                   </div>
 

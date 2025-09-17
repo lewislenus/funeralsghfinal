@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import {
   Heart,
   Users,
   Phone,
+  Download,
+  Eye,
 } from "lucide-react";
 import Image from "next/image";
 import { GuestbookForm } from "./guestbook-form";
@@ -26,6 +28,7 @@ import { InlinePdfViewer } from "./inline-pdf-viewer";
 import { PdfDisplay } from "./pdf-display";
 import { motion } from "framer-motion";
 import { getPublicPdfUrl } from "@/lib/cloudinary-utils";
+import { brochureAPI, type Brochure } from "@/lib/api/brochure";
 
 interface FuneralEventPageProps {
   funeral: {
@@ -73,6 +76,26 @@ interface FuneralEventPageProps {
 
 export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [brochures, setBrochures] = useState<Brochure[]>([]);
+  const [loadingBrochures, setLoadingBrochures] = useState(true);
+
+  // Load brochures when component mounts
+  useEffect(() => {
+    const loadBrochures = async () => {
+      try {
+        const { data, error } = await brochureAPI.getBrochuresForFuneral(funeral.id);
+        if (!error && data) {
+          setBrochures(data);
+        }
+      } catch (error) {
+        console.error("Error loading brochures:", error);
+      } finally {
+        setLoadingBrochures(false);
+      }
+    };
+
+    loadBrochures();
+  }, [funeral.id]);
 
   // Deterministic date formatter (UTC) to avoid hydration mismatch when server
   // and client have different default locales/timezones.
@@ -142,6 +165,8 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                   alt={funeral.deceased?.name || "Funeral Photo"}
                   width={200}
                   height={200}
+                  priority
+                  sizes="(max-width: 768px) 160px, 200px"
                   className="w-48 h-48 md:w-56 md:h-56 rounded-2xl object-cover border-4 border-amber-500 shadow-2xl"
                 />
                 <div className="absolute -bottom-4 -right-4 bg-white rounded-xl p-3 shadow-lg">
@@ -296,18 +321,80 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
 
                     <div>
                         <h3 className="text-xl font-semibold text-slate-800 mb-4">
-                          Funeral Brochure
+                          Funeral Brochures
                         </h3>
-                        {funeral.brochure_url ? (
+                        {loadingBrochures ? (
+                          <div className="flex items-center justify-center p-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                            <span className="ml-2 text-slate-600">Loading brochures...</span>
+                          </div>
+                        ) : brochures.length > 0 ? (
+                          <div className="space-y-6">
+                            {brochures.map((brochure, index) => (
+                              <motion.div
+                                key={brochure.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="border rounded-lg p-4 bg-white shadow-sm"
+                              >
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-lg font-medium text-slate-800">{brochure.title}</h4>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(getPublicPdfUrl(brochure.pdf_url), '_blank', 'noopener,noreferrer')}
+                                    >
+                                      <Eye className="w-4 h-4 mr-1" />
+                                      View
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = getPublicPdfUrl(brochure.pdf_url);
+                                        link.rel = 'noopener noreferrer';
+                                        link.target = '_blank';
+                                        link.download = `${brochure.title}.pdf`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                      }}
+                                    >
+                                      <Download className="w-4 h-4 mr-1" />
+                                      Download
+                                    </Button>
+                                  </div>
+                                </div>
+                                {brochure.description && (
+                                  <p className="text-slate-600 mb-4">{brochure.description}</p>
+                                )}
+                                <PdfDisplay 
+                                  pdfUrl={brochure.pdf_url}
+                                  title={brochure.title}
+                                  description={brochure.description || "Memorial service details and tribute information"}
+                                  mode="modal"
+                                  showThumbnail={true}
+                                />
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : funeral.brochure_url ? (
+                          // Fallback to legacy brochure_url if no database brochures
                           <PdfDisplay 
                             pdfUrl={funeral.brochure_url}
                             title="Funeral Brochure"
                             description="Memorial service details and tribute information"
-                            mode="flipbook"
+                            mode="modal"
                             showThumbnail={true}
                           />
                         ) : (
-                          <p className="text-slate-500">The funeral brochure is not available yet.</p>
+                          <div className="text-center py-8">
+                            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                            <p className="text-slate-500">No funeral brochures are available yet.</p>
+                          </div>
                         )}
                       </div>
 
@@ -541,7 +628,8 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                   alt="Funeral poster"
                   width={400}
                   height={600}
-                  className="w-full rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+                  sizes="(max-width: 768px) 90vw, 400px"
+                  className="w-full h-auto rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
                 />
               </CardContent>
             </Card>
@@ -556,11 +644,30 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
             <Card className="border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-lg text-slate-800">
-                  Funeral Brochure
+                  Funeral Brochures
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {funeral.brochure_url ? (
+                {loadingBrochures ? (
+                  <div className="flex items-center justify-center p-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600"></div>
+                    <span className="ml-2 text-slate-600">Loading...</span>
+                  </div>
+                ) : brochures.length > 0 ? (
+                  <div className="space-y-4">
+                    {brochures.map((brochure, index) => (
+                      <div key={brochure.id} className="border rounded-lg p-3">
+                        <h4 className="text-sm font-medium text-slate-800 mb-2">{brochure.title}</h4>
+                        <PdfDisplay 
+                          pdfUrl={brochure.pdf_url}
+                          title={brochure.title}
+                          description={brochure.description || "Memorial service details"}
+                          mode="modal"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : funeral.brochure_url ? (
                   <PdfDisplay 
                     pdfUrl={funeral.brochure_url}
                     title="Funeral Brochure"
@@ -570,7 +677,7 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                 ) : (
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                    <p className="text-slate-600">Brochure coming soon</p>
+                    <p className="text-slate-600">No brochures available</p>
                   </div>
                 )}
               </CardContent>

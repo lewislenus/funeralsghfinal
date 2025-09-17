@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EnhancedPdfViewerProps {
   pdfUrl: string;
@@ -36,9 +37,12 @@ interface EnhancedPdfViewerProps {
   description?: string;
   showInModal?: boolean;
   autoOpen?: boolean;
+  fullscreenFit?: 'contain' | 'cover'; // legacy prop kept for compatibility
+  suppressPreview?: boolean; // when true, don't render internal PreviewThumbnail wrapper
 }
 
 type ViewMode = "single" | "double" | "thumbnail";
+type FitMode = 'cover' | 'contain' | 'width' | 'height' | 'actual';
 
 export function EnhancedPdfViewer({ 
   pdfUrl, 
@@ -46,7 +50,9 @@ export function EnhancedPdfViewer({
   title = "Funeral Brochure",
   description = "Interactive PDF Viewer",
   showInModal = true,
-  autoOpen = false
+  autoOpen = false,
+  fullscreenFit = 'contain',
+  suppressPreview = false
 }: EnhancedPdfViewerProps) {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,11 +62,20 @@ export function EnhancedPdfViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("single");
+  const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Default to single page initially, will be updated by useEffect once isMobile is determined
+    return "single";
+  });
   const [searchTerm, setSearchTerm] = useState("");
+  const [fitMode, setFitMode] = useState<FitMode>(fullscreenFit === 'cover' ? 'cover' : 'contain');
   const [isOpen, setIsOpen] = useState(autoOpen);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
+  // Internal trackers kept in refs to avoid triggering full component re-renders that cause visible flicker
+  const renderingPagesRef = useRef<Set<number>>(new Set());
+  const [resizeTick, setResizeTick] = useState(0); // minimal tick used only for recalculating fit size
+  const resizeRafRef = useRef<number | null>(null);
+  const openedOnceRef = useRef(false); // prevent re-running entrance animation logic if already open
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvas2Ref = useRef<HTMLCanvasElement>(null);
@@ -73,12 +88,38 @@ export function EnhancedPdfViewer({
     configurePdfWorker();
   }, []);
 
-  // Load PDF when URL changes or component opens
+  // Update view mode based on screen size
   useEffect(() => {
-    if (isOpen && pdfUrl) {
-      loadPdfDocument();
+    if (isMobile !== undefined) {
+      // Set default view mode based on screen size
+      // Mobile: single page, Desktop: double page
+      setViewMode(isMobile ? "single" : "double");
     }
+  }, [isMobile]);
+
+  // Load PDF only when first opened (or when pdfUrl changes while open). Prevent duplicate preloads that cause a flash.
+  useEffect(() => {
+    if (!isOpen || !pdfUrl) return;
+    // If already loaded this URL, skip
+    if (pdf && openedOnceRef.current) return;
+    loadPdfDocument();
+    openedOnceRef.current = true;
   }, [pdfUrl, isOpen]);
+
+  // Window resize listener (debounced with rAF + trailing update) to reduce rapid re-renders that may cause blinking
+  useEffect(() => {
+    const handleResize = () => {
+      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+      resizeRafRef.current = requestAnimationFrame(() => {
+        setResizeTick(t => t + 1);
+      });
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+    };
+  }, []);
 
   // Generate thumbnails when PDF loads
   useEffect(() => {
@@ -138,31 +179,50 @@ export function EnhancedPdfViewer({
   };
 
   const renderPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement | null, scale: number = zoom / 100) => {
-    if (!pdf || !canvas || renderingPages.has(pageNum)) return;
-    
-    setRenderingPages(prev => new Set(prev).add(pageNum));
-    
+    if (!pdf || !canvas) return;
+    if (renderingPagesRef.current.has(pageNum)) return; // skip overlapping render
+    renderingPagesRef.current.add(pageNum);
     try {
       const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale, rotation: rotation * Math.PI / 180 });
-      
+      const baseViewport = page.getViewport({ scale: 1, rotation: rotation * Math.PI / 180 });
+      let calcScale = scale;
+      if (containerRef.current && fitMode !== 'actual') {
+        const container = containerRef.current;
+        const maxW = container.clientWidth;
+        const maxH = container.clientHeight;
+        // Guard: if container not yet measured (0 size), delay render slightly instead of clearing canvas
+        if (maxW === 0 || maxH === 0) {
+          // Re-queue a render on next animation frame
+          requestAnimationFrame(() => {
+            renderingPagesRef.current.delete(pageNum);
+            renderPage(pageNum, canvas, scale);
+          });
+          return;
+        }
+        const wScale = maxW / baseViewport.width;
+        const hScale = maxH / baseViewport.height;
+        switch (fitMode) {
+          case 'cover': calcScale = Math.max(wScale, hScale); break;
+          case 'contain': calcScale = Math.min(wScale, hScale); break;
+          case 'width': calcScale = wScale; break;
+          case 'height': calcScale = hScale; break;
+        }
+      }
+      const viewport = page.getViewport({ scale: calcScale, rotation: rotation * Math.PI / 180 });
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
       const context = canvas.getContext('2d');
       if (context) {
         await page.render({ canvasContext: context, viewport }).promise;
       }
     } catch (error) {
-      console.error(`Failed to render page ${pageNum}:`, error);
+      if ((error as any)?.name !== 'RenderingCancelledException') {
+        console.error(`Failed to render page ${pageNum}:`, error);
+      }
     } finally {
-      setRenderingPages(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(pageNum);
-        return newSet;
-      });
+      renderingPagesRef.current.delete(pageNum);
     }
-  }, [pdf, zoom, rotation, renderingPages]);
+  }, [pdf, zoom, rotation, fitMode, resizeTick]);
 
   // Render current page(s)
   useEffect(() => {
@@ -175,6 +235,43 @@ export function EnhancedPdfViewer({
       }
     }
   }, [currentPage, viewMode, renderPage]);
+
+  // Ensure first page renders immediately when PDF loads
+  useEffect(() => {
+    if (pdf && numPages > 0 && !loading && canvasRef.current) {
+      // Small delay to ensure canvas is properly mounted
+      const timeoutId = setTimeout(() => {
+        // Force render the first page(s) immediately after PDF loads
+        if (viewMode === "single" && canvasRef.current) {
+          renderPage(1, canvasRef.current);
+        } else if (viewMode === "double" && canvasRef.current) {
+          renderPage(1, canvasRef.current);
+          if (numPages > 1 && canvas2Ref.current) {
+            renderPage(2, canvas2Ref.current);
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [pdf, numPages, loading, viewMode, renderPage]);
+
+  // Secondary reinforcement render shortly after open to fix rare blank flashes
+  useEffect(() => {
+    if (isOpen && pdf && numPages > 0) {
+      const id = setTimeout(() => {
+        if (viewMode === 'single') {
+          renderPage(currentPage, canvasRef.current);
+        } else if (viewMode === 'double') {
+          renderPage(currentPage, canvasRef.current);
+          if (currentPage < numPages) {
+            renderPage(currentPage + 1, canvas2Ref.current);
+          }
+        }
+      }, 400); // a bit later than initial 100ms to catch size stabilization
+      return () => clearTimeout(id);
+    }
+  }, [isOpen, pdf, numPages, viewMode, currentPage, renderPage]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") handleClose();
@@ -204,8 +301,8 @@ export function EnhancedPdfViewer({
     }
   };
 
-  const handleZoomIn = () => setZoom(z => Math.min(300, z + 25));
-  const handleZoomOut = () => setZoom(z => Math.max(50, z - 25));
+  const handleZoomIn = () => { setFitMode('actual'); setZoom(z => Math.min(400, z + 25)); };
+  const handleZoomOut = () => { setFitMode('actual'); setZoom(z => Math.max(25, z - 25)); };
   const handleRotate = () => setRotation(r => (r + 90) % 360);
 
   const handleClose = () => {
@@ -245,7 +342,11 @@ export function EnhancedPdfViewer({
             <img 
               src={thumbnails[0]} 
               alt="PDF Preview" 
+              width={200}
+              height={260}
+              style={{ width: '100%', height: 'auto' }}
               className="w-full h-full object-contain"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -301,7 +402,7 @@ export function EnhancedPdfViewer({
               
               {/* Toolbar */}
               <div className="flex items-center gap-2">
-                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="mr-4">
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="mr-2">
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="single" className="p-2">
                       <FileText className="w-4 h-4" />
@@ -315,18 +416,6 @@ export function EnhancedPdfViewer({
                   </TabsList>
                 </Tabs>
 
-                <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoom <= 50}>
-                  <ZoomOut className="w-4 h-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-[60px] text-center">{zoom}%</span>
-                <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoom >= 300}>
-                  <ZoomIn className="w-4 h-4" />
-                </Button>
-                
-                <Button variant="outline" size="sm" onClick={handleRotate}>
-                  <RotateCw className="w-4 h-4" />
-                </Button>
-                
                 <Button variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="w-4 h-4" />
                 </Button>
@@ -337,9 +426,6 @@ export function EnhancedPdfViewer({
 
                 {showInModal && (
                   <>
-                    <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)}>
-                      {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </Button>
                     <Button variant="outline" size="sm" onClick={handleClose}>
                       <X className="w-4 h-4" />
                     </Button>
@@ -352,7 +438,7 @@ export function EnhancedPdfViewer({
             <div className="flex-1 flex overflow-hidden">
               {/* Main PDF Area */}
               <div className="flex-1 flex flex-col">
-                <div className="flex-1 flex items-center justify-center p-4 bg-slate-100 overflow-auto" ref={containerRef}>
+                <div className="flex-1 flex items-center justify-center bg-white overflow-hidden" ref={containerRef}>
                   {loading && (
                     <div className="flex flex-col items-center">
                       <Loader2 className="w-12 h-12 text-slate-500 animate-spin mb-4" />
@@ -376,7 +462,7 @@ export function EnhancedPdfViewer({
                   )}
                   
                   {!loading && !error && (
-                    <div className="flex gap-4">
+                    <div className="flex gap-0 w-full h-full">
                       {viewMode === "thumbnail" ? (
                         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-6xl">
                           {thumbnails.map((thumb, index) => (
@@ -391,7 +477,15 @@ export function EnhancedPdfViewer({
                               }}
                             >
                               {thumb ? (
-                                <img src={thumb} alt={`Page ${index + 1}`} className="w-full h-auto" />
+                                <img 
+                                  src={thumb} 
+                                  alt={`Page ${index + 1}`} 
+                                  width={120}
+                                  height={160}
+                                  style={{ width: '100%', height: 'auto' }}
+                                  className="w-full h-auto" 
+                                  loading="lazy"
+                                />
                               ) : (
                                 <div className="aspect-[3/4] bg-slate-200 flex items-center justify-center">
                                   <FileText className="w-8 h-8 text-slate-400" />
@@ -404,7 +498,7 @@ export function EnhancedPdfViewer({
                           ))}
                         </div>
                       ) : (
-                        <div className={`flex gap-2 ${viewMode === "double" ? "justify-center" : "justify-center"}`}>
+                        <div className={`flex gap-0 w-full h-full items-center justify-center`}>        
                           {viewMode === "double" ? (
                             <div className="flex gap-1 bg-slate-200 p-2 rounded-lg shadow-2xl">
                               <canvas
@@ -427,15 +521,16 @@ export function EnhancedPdfViewer({
                               )}
                             </div>
                           ) : (
-                            <canvas
-                              ref={canvasRef}
-                              className="shadow-lg rounded-lg border bg-white max-w-full max-h-full"
-                              style={{ 
-                                transform: `rotate(${rotation}deg)`,
-                                maxWidth: "90vw",
-                                maxHeight: "70vh"
-                              }}
-                            />
+                            <div className="w-full h-full relative">
+                              <canvas
+                                ref={canvasRef}
+                                className="w-full h-full block bg-white"
+                                style={{
+                                  // Canvas pixel size is set in renderPage; CSS ensures it stretches
+                                  transform: `rotate(${rotation}deg)`
+                                }}
+                              />
+                            </div>
                           )}
                         </div>
                       )}
@@ -494,14 +589,14 @@ export function EnhancedPdfViewer({
     </AnimatePresence>
   );
 
-  // Load PDF metadata for preview
-  useEffect(() => {
-    if (pdfUrl && !isOpen) {
-      loadPdfDocument();
-    }
-  }, [pdfUrl]);
+  // Removed background pre-loading while closed to avoid double-load flicker.
 
   if (!showInModal) {
+    return <FullViewer />;
+  }
+
+  // When suppressPreview is true, only render the FullViewer (controlled externally)
+  if (suppressPreview) {
     return <FullViewer />;
   }
 
