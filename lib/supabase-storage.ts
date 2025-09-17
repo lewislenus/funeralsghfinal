@@ -7,7 +7,29 @@
 
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-const supabase = createClientComponentClient();
+// Lazy client creation to avoid build-time issues
+function createSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key-for-build';
+  
+  return createClientComponentClient({
+    supabaseUrl: url,
+    supabaseKey: key,
+  });
+}
+
+// Check for valid environment
+function checkEnvironment() {
+  const hasValidCredentials = 
+    process.env.NEXT_PUBLIC_SUPABASE_URL && 
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://dummy.supabase.co' &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'dummy-key-for-build';
+  
+  if (!hasValidCredentials) {
+    throw new Error('Supabase is not configured. Please set environment variables.');
+  }
+}
 
 // Storage bucket configuration
 const STORAGE_CONFIG = {
@@ -32,6 +54,9 @@ const STORAGE_CONFIG = {
  */
 export async function initializePdfBucket() {
   try {
+    checkEnvironment();
+    const supabase = createSupabaseClient();
+    
     // Just check if bucket exists, don't try to create it
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
@@ -41,7 +66,7 @@ export async function initializePdfBucket() {
       return true;
     }
 
-    const bucketExists = buckets?.some(bucket => bucket.name === STORAGE_CONFIG.bucketName);
+    const bucketExists = buckets?.some((bucket: any) => bucket.name === STORAGE_CONFIG.bucketName);
 
     if (!bucketExists) {
       console.warn(`Bucket '${STORAGE_CONFIG.bucketName}' not found. It may need to be created manually in the Supabase dashboard.`);
@@ -69,6 +94,10 @@ export async function uploadPdfToSupabase(
   path: string;
   publicUrl: string;
 }> {
+  // Check environment first
+  checkEnvironment();
+  const supabase = createSupabaseClient();
+  
   // Validate file
   if (!STORAGE_CONFIG.allowedMimeTypes.includes(file.type)) {
     throw new Error("Only PDF files are allowed");
@@ -133,6 +162,9 @@ export async function uploadPdfToSupabase(
  */
 export async function deletePdfFromSupabase(filePath: string): Promise<boolean> {
   try {
+    checkEnvironment();
+    const supabase = createSupabaseClient();
+    
     const { error } = await supabase.storage
       .from(STORAGE_CONFIG.bucketName)
       .remove([filePath]);
@@ -154,6 +186,9 @@ export async function deletePdfFromSupabase(filePath: string): Promise<boolean> 
  */
 export async function listFuneralPdfs(funeralId: string) {
   try {
+    checkEnvironment();
+    const supabase = createSupabaseClient();
+    
     const { data, error } = await supabase.storage
       .from(STORAGE_CONFIG.bucketName)
       .list(`funeral_${funeralId}/`);
@@ -162,7 +197,7 @@ export async function listFuneralPdfs(funeralId: string) {
       throw error;
     }
 
-    return data?.map(file => ({
+    return data?.map((file: any) => ({
       name: file.name,
       path: `funeral_${funeralId}/${file.name}`,
       url: supabase.storage

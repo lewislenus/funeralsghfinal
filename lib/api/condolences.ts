@@ -7,11 +7,25 @@ type CondolenceInsert = Database["public"]["Tables"]["condolences"]["Insert"]
 export class CondolencesAPI {
   private supabase = createClient()
 
+  private checkEnvironment() {
+    const hasValidCredentials = 
+      process.env.NEXT_PUBLIC_SUPABASE_URL && 
+      process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://dummy.supabase.co' &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'dummy-key-for-build';
+    
+    if (!hasValidCredentials) {
+      throw new Error('Supabase is not configured. Please set environment variables.');
+    }
+  }
+
   async getCondolences(funeralId: string): Promise<{
     data: Condolence[]
     error: string | null
   }> {
     try {
+      this.checkEnvironment();
+      
       const { data, error } = await this.supabase
         .from("condolences")
         .select("*")
@@ -37,6 +51,8 @@ export class CondolencesAPI {
     error: string | null
   }> {
     try {
+      this.checkEnvironment();
+      
       const { data, error } = await this.supabase
         .from("condolences")
         .insert({
@@ -61,6 +77,8 @@ export class CondolencesAPI {
 
   async approveCondolence(id: string): Promise<{ error: string | null }> {
     try {
+      this.checkEnvironment();
+      
       const { error } = await this.supabase.from("condolences").update({ is_approved: true }).eq("id", id)
 
       if (error) {
@@ -77,6 +95,8 @@ export class CondolencesAPI {
 
   async deleteCondolence(id: string): Promise<{ error: string | null }> {
     try {
+      this.checkEnvironment();
+      
       const { error } = await this.supabase.from("condolences").delete().eq("id", id)
 
       if (error) {

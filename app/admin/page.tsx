@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,8 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { funeralsAPI } from "@/lib/api/funerals";
-import { brochureAPI } from "@/lib/api/brochure";
 import { AdminBrochureUpload } from "@/components/admin-brochure-upload";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -34,8 +34,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { handleApiError } from "./error-handlers";
 
 type PendingFuneral = {
   id: string;
@@ -84,6 +82,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAdmin = async () => {
       try {
+        const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
         const {
           data: { user },
@@ -130,6 +129,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const { funeralsAPI } = await import("@/lib/api/funerals");
       const supabase = createClient();
       
       // Use the funeralsAPI to get admin funerals
@@ -188,6 +189,8 @@ export default function AdminDashboard() {
 
   const handleApproveFuneral = async (id: string) => {
     try {
+      const { funeralsAPI } = await import("@/lib/api/funerals");
+      
       // Call the API to update the status to approved
       const { error } = await funeralsAPI.updateFuneral(id, { status: "approved" });
 
@@ -234,6 +237,8 @@ export default function AdminDashboard() {
 
   const handleRejectFuneral = async (id: string) => {
     try {
+      const { funeralsAPI } = await import("@/lib/api/funerals");
+      
       // Call the API to update the status to rejected
       const { error } = await funeralsAPI.updateFuneral(id, { status: "rejected" });
 
@@ -283,6 +288,7 @@ export default function AdminDashboard() {
     
     // Load existing brochures for this funeral
     try {
+      const { brochureAPI } = await import("@/lib/api/brochure");
       const { data: brochures, error } = await brochureAPI.getBrochuresForFuneral(funeralId);
       if (!error && brochures) {
         setFuneralBrochures(prev => ({ ...prev, [funeralId]: brochures }));
@@ -296,6 +302,7 @@ export default function AdminDashboard() {
     if (selectedFuneralForBrochure) {
       // Reload brochures for the selected funeral
       try {
+        const { brochureAPI } = await import("@/lib/api/brochure");
         const { data: brochures, error } = await brochureAPI.getBrochuresForFuneral(selectedFuneralForBrochure);
         if (!error && brochures) {
           setFuneralBrochures(prev => ({ ...prev, [selectedFuneralForBrochure]: brochures }));

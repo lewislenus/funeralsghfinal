@@ -4,6 +4,7 @@
 ✅ Build completed successfully with npm!
 ✅ Lockfile updated (using npm instead of pnpm)
 ✅ All dependencies resolved
+✅ Environment variable handling fixed
 
 ## Files Created for Deployment
 - `netlify.toml` - Netlify configuration with build settings and security headers
@@ -14,6 +15,50 @@
 - **Removed**: `pnpm-lock.yaml` (outdated)
 - **Created**: Fresh `package-lock.json` with npm
 - **Result**: Resolves Netlify build error with frozen lockfile
+
+## 🔧 Required Environment Variables
+
+Before deploying, set these environment variables in your Netlify dashboard:
+
+### Supabase Configuration (Required)
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+### Cloudinary Configuration (Optional)
+```bash
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+## 📝 How to Set Environment Variables in Netlify
+
+1. Go to your Netlify site dashboard
+2. Navigate to **Site Settings** → **Environment Variables**
+3. Click **Add a variable** for each required variable
+4. Add the variable name and value
+5. Click **Save**
+
+## 🚀 Deployment Steps
+
+1. **Connect to Netlify:**
+   - Go to [Netlify Dashboard](https://app.netlify.com)
+   - Click "Add new site" → "Import an existing project"
+   - Connect your Git repository
+
+2. **Configure Build Settings:**
+   - **Build command:** `npm run build`
+   - **Publish directory:** Auto-detected by Netlify
+   - **Node version:** 18.x or higher
+
+3. **Set Environment Variables** (see section above)
+
+4. **Deploy:**
+   - Netlify will automatically build and deploy
+   - Your site will be live with a generated URL
 
 ## Pre-Deployment Checklist
 

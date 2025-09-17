@@ -31,11 +31,14 @@ export interface FuneralFilters {
 function getSupabase() {
   // Check if we're in a server environment
   if (typeof window === "undefined") {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key-for-build';
     
-    if (!url || !key) {
-      throw new Error("Missing Supabase environment variables");
+    // Only warn in production when not building
+    if (process.env.NODE_ENV === 'production' && 
+        process.env.NEXT_PHASE !== 'phase-production-build' &&
+        (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
+      console.warn("Missing Supabase environment variables in production");
     }
     
     // Server-side: use createClient from supabase-js directly
@@ -47,6 +50,18 @@ function getSupabase() {
 
 export class FuneralsAPI {
   private supabase = getSupabase();
+
+  private checkEnvironment() {
+    const hasValidCredentials = 
+      process.env.NEXT_PUBLIC_SUPABASE_URL && 
+      process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://dummy.supabase.co' &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'dummy-key-for-build';
+    
+    if (!hasValidCredentials) {
+      throw new Error('Supabase is not configured. Please set environment variables.');
+    }
+  }
 
   private transformFuneralData(rawData: any): FuneralWithStats {
     const condolences_count = Array.isArray(rawData.condolences)
@@ -77,6 +92,8 @@ export class FuneralsAPI {
     error: string | null;
   }> {
     try {
+      this.checkEnvironment();
+      
       const { data, count, error } = await this.supabase
         .from("funerals")
         .select("*, condolences(count), donations(amount)", { count: "exact" });
@@ -361,6 +378,8 @@ export class FuneralsAPI {
     error: string | null;
   }> {
     try {
+      this.checkEnvironment();
+      
       const { data: funerals, error } = await this.supabase
         .from("funerals")
         .select("*, condolences(count), donations(amount)")

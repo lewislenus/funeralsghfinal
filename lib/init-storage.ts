@@ -23,12 +23,17 @@ export async function setupApplicationStorage() {
   }
 }
 
-// Initialize storage when the module is imported
-if (typeof window === 'undefined') {
-  // Server-side initialization
+// Only initialize storage in production runtime, not during build
+const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+const isDev = process.env.NODE_ENV === 'development';
+
+if (typeof window === 'undefined' && !isBuild) {
+  // Server-side initialization only in non-build environments
   setupApplicationStorage().then((result) => {
     if (!result.success) {
       console.warn('Storage initialization incomplete, but fallbacks available');
     }
+  }).catch((error) => {
+    console.warn('Storage initialization failed silently:', error);
   });
 }
