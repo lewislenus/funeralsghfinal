@@ -26,7 +26,7 @@ export function Footer() {
             </p>
             <div className="flex items-center text-sm text-slate-400">
               <Heart className="w-4 h-4 mr-2 text-amber-500" />
-              Made with love for Ghanaian families
+              Made with love for families worldwide
             </div>
           </div>
 
