@@ -68,9 +68,9 @@ export function HeroSection() {
         />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container mx-auto px-4 relative z-20">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center relative z-30">
             {/* Left Content */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
@@ -123,16 +123,16 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.7 }}
-                className="flex flex-col sm:flex-row gap-6"
+                className="flex flex-col sm:flex-row gap-6 relative z-20"
               >
                 <Button
                   asChild
                   size="lg"
-                  className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-600 hover:via-orange-600 hover:to-red-700 text-white rounded-2xl px-10 py-6 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 group transform hover:scale-105"
+                  className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-600 hover:via-orange-600 hover:to-red-700 text-white rounded-2xl px-10 py-6 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 relative z-30"
                 >
-                  <Link href="/funerals">
+                  <Link href="/funerals" className="flex items-center justify-center">
                     Browse Funerals
-                    <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform duration-200" />
+                    <ArrowRight className="w-6 h-6 ml-3 transition-transform duration-200 group-hover:translate-x-1" />
                   </Link>
                 </Button>
 
@@ -140,9 +140,9 @@ export function HeroSection() {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-2xl px-10 py-6 text-lg font-semibold bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-2xl px-10 py-6 text-lg font-semibold bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 relative z-30"
                 >
-                  <Link href="/about" className="flex items-center">
+                  <Link href="/about" className="flex items-center justify-center">
                     <Play className="w-5 h-5 mr-3" />
                     Watch Demo
                   </Link>
@@ -178,7 +178,7 @@ export function HeroSection() {
             </div>
 
             {/* Background Decoration */}
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-200 to-red-200 rounded-[3rem] opacity-20 blur-sm"></div>
+            {/* Removed potentially interfering background decoration */}
           </div>
         </div>
       </div>
