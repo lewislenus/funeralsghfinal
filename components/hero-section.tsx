@@ -86,7 +86,7 @@ export function HeroSection() {
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 rounded-full text-sm font-semibold shadow-sm"
               >
                 <Star className="w-4 h-4 mr-2 text-amber-600" />
-                Trusted by 500+ Ghanaian Families
+                Trusted by 500+ Families Worldwide
               </motion.div>
 
               {/* Main Heading */}
@@ -112,7 +112,7 @@ export function HeroSection() {
                   transition={{ duration: 0.8, delay: 0.5 }}
                   className="text-xl md:text-2xl text-slate-600 leading-relaxed max-w-2xl"
                 >
-                  Ghana's premier digital platform connecting families and
+                  A premier digital platform connecting families and
                   communities to celebrate lives, share condolences, and provide
                   meaningful support during times of loss.
                 </motion.p>

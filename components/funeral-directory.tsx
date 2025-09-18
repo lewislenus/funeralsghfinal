@@ -90,7 +90,7 @@ export function FuneralDirectory() {
             Upcoming Funeral Services
           </h2>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-            Upcoming memorial services across Ghana. Browse, leave
+            Upcoming memorial services worldwide. Browse, leave
             condolences, share memories, and show support to grieving families.
           </p>
 

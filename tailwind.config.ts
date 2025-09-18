@@ -53,7 +53,7 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Ghanaian-inspired funeral colors
+        // Cultural funeral-inspired colors
         stone: {
           50: "#fafaf9",
           100: "#f5f5f4",

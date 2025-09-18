@@ -50,7 +50,7 @@ export default function AboutPage() {
       name: "Kwame Asante",
       role: "Founder & CEO",
       image: "/funeral1.jpg",
-      bio: "Former tech executive with a passion for using technology to serve Ghanaian communities.",
+      bio: "Former tech executive with a passion for using technology to serve communities worldwide.",
     },
     {
       name: "Akosua Mensah",
@@ -72,7 +72,7 @@ export default function AboutPage() {
       event: "damarifadue founded with a vision to digitize funeral services",
     },
     { year: "2023", event: "First 100 families joined our platform" },
-    { year: "2024", event: "Expanded to all 16 regions of Ghana" },
+    { year: "2024", event: "Expanded to serve communities worldwide" },
     {
       year: "2024",
       event: "Reached 500+ families served and ₵50K+ in community support",
@@ -103,7 +103,7 @@ export default function AboutPage() {
               </h1>
               <p className="text-xl md:text-2xl text-slate-300 leading-relaxed mb-8">
                 We're on a mission to honor lives, preserve memories, and
-                strengthen communities across Ghana through dignified digital
+                strengthen communities worldwide through dignified digital
                 funeral services.
               </p>
               <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -143,7 +143,7 @@ export default function AboutPage() {
                     Our Mission
                   </h2>
                   <p className="text-lg text-slate-600 leading-relaxed mb-6">
-                    In Ghanaian culture, funerals are not just
+                    In many cultures, funerals are not just
                     ceremonies—they're celebrations of life, community
                     gatherings, and sacred traditions that bring families
                     together. We recognized that in our digital age, these
@@ -166,7 +166,7 @@ export default function AboutPage() {
                   <div className="flex items-center space-x-4 mt-3">
                     <CheckCircle className="w-6 h-6 text-green-500" />
                     <span className="text-slate-700 font-medium">
-                      Accessible to all Ghanaian communities
+                      Accessible to all communities worldwide
                     </span>
                   </div>
                   <div className="flex items-center space-x-4 mt-3">
@@ -181,7 +181,7 @@ export default function AboutPage() {
                   <div className="bg-gradient-to-br from-amber-100 to-orange-200 rounded-3xl p-8">
                     <Image
                       src="/funeral2.jpg"
-                      alt="Ghanaian funeral ceremony"
+                      alt="Memorial ceremony"
                       width={500}
                       height={400}
                       className="rounded-2xl shadow-lg"
@@ -195,7 +195,7 @@ export default function AboutPage() {
                       </span>
                     </div>
                     <p className="text-sm text-slate-600">
-                      Trusted by families across all 16 regions of Ghana
+                      Trusted by families worldwide
                     </p>
                   </div>
                 </div>
@@ -219,7 +219,7 @@ export default function AboutPage() {
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
                 These principles guide everything we do and shape how we serve
-                Ghanaian families
+                families worldwide
               </p>
             </motion.div>
 
@@ -265,7 +265,7 @@ export default function AboutPage() {
                 Meet Our Team
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Passionate individuals dedicated to serving Ghanaian families
+                Passionate individuals dedicated to serving families worldwide
                 with technology and compassion
               </p>
             </motion.div>
@@ -320,7 +320,7 @@ export default function AboutPage() {
             >
               <h2 className="text-4xl font-bold mb-4">Our Journey</h2>
               <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-                From a simple idea to serving hundreds of families across Ghana
+                From a simple idea to serving hundreds of families worldwide
               </p>
             </motion.div>
 

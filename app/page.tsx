@@ -8,12 +8,12 @@ import { TestimonialsSection } from "@/components/testimonials-section";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'damerifa Dua - Ghana\'s Premier Funeral Services Platform',
-  description: 'Welcome to damerifa Dua, where we honor the lives and memories of our loved ones. Find funeral announcements, share condolences, make donations, and celebrate the legacy of those who have passed. Serving communities across Ghana with compassion and dignity.',
-  keywords: 'Ghana funeral services, funeral announcements Ghana, obituary Ghana, condolences, memorial services, funeral donations, tribute, remembrance, damerifa Dua Ghana',
+  title: 'damerifa Dua - Premier Funeral Services Platform',
+  description: 'Welcome to damerifa Dua, where we honor the lives and memories of our loved ones. Find funeral announcements, share condolences, make donations, and celebrate the legacy of those who have passed. Serving communities worldwide with compassion and dignity.',
+  keywords: 'funeral services, funeral announcements, obituary, condolences, memorial services, funeral donations, tribute, remembrance, damerifa Dua',
   
   openGraph: {
-    title: 'damerifa Dua - Ghana\'s Premier Funeral Services Platform',
+    title: 'damerifa Dua - Premier Funeral Services Platform',
     description: 'Honor the lives and memories of loved ones. Find funeral announcements, share condolences, and celebrate their legacy with dignity and compassion.',
     url: 'https://damerifadua.netlify.app',
     images: [
@@ -21,14 +21,14 @@ export const metadata: Metadata = {
         url: '/funeral1.jpg',
         width: 1200,
         height: 630,
-        alt: 'damerifa Dua - Honoring Lives and Memories in Ghana',
+        alt: 'damerifa Dua - Honoring Lives and Memories',
       },
     ],
   },
   
   twitter: {
     card: 'summary_large_image',
-    title: 'damerifa Dua - Ghana\'s Funeral Services Platform',
+    title: 'damerifa Dua - Funeral Services Platform',
     description: 'Honor lives, share condolences, and celebrate memories with compassion.',
     images: ['/funeral1.jpg'],
   },

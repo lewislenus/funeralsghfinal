@@ -8,7 +8,7 @@ import '@/lib/init-storage'
 export const metadata: Metadata = {
   title: 'damerifa Dua - Honoring Lives, Celebrating Memories',
   description: 'damerifa Dua is a compassionate funeral services platform dedicated to honoring the lives of loved ones and celebrating their cherished memories. Find funeral announcements, share condolences, and support families during their time of need.',
-  keywords: 'funeral services, memorial, obituary, condolences, funeral announcements, Ghana funeral, tribute, remembrance, damerifa Dua',
+  keywords: 'funeral services, memorial, obituary, condolences, funeral announcements, tribute, remembrance, damerifa Dua',
   generator: 'Next.js',
   metadataBase: new URL('https://damerifadua.netlify.app'),
   
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'damerifa Dua - Honoring Lives, Celebrating Memories',
-    description: 'A compassionate platform for funeral services and memorial announcements in Ghana.',
+    description: 'A compassionate platform for funeral services and memorial announcements worldwide.',
     images: ['/og-image.jpg'],
     creator: '@damerifadua',
   },

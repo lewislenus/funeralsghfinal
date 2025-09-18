@@ -197,7 +197,7 @@ export default function FuneralsPage() {
               Browse Funeral Services
             </h1>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-8">
-              Connect with funeral services across Ghana. Leave condolences,
+              Connect with funeral services worldwide. Leave condolences,
               share memories, and show support to grieving families.
             </p>
 
