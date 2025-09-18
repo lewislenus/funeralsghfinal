@@ -9,7 +9,7 @@ export function StatsSection() {
       icon: Users,
       value: "500+",
       label: "Families Served",
-      description: "Across all 16 regions of Ghana",
+      description: "Across communities worldwide",
     },
     {
       icon: Heart,
@@ -19,9 +19,9 @@ export function StatsSection() {
     },
     {
       icon: MapPin,
-      value: "16",
-      label: "Regions Covered",
-      description: "From Greater Accra to Upper West",
+      value: "Global",
+      label: "Reach",
+      description: "Supporting families everywhere",
     },
     {
       icon: Clock,
@@ -46,7 +46,7 @@ export function StatsSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Trusted by Families Across Ghana</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Trusted by Families Worldwide</h2>
           <p className="text-xl text-slate-300 max-w-2xl mx-auto">
             Our platform has become the go-to resource for honoring loved ones and supporting families during their time
             of need.
