@@ -36,6 +36,7 @@ export type Database = {
           brochure_url: string | null
           status: string | null
           featured: boolean | null
+          is_visible: boolean | null
           views_count: number | null
           deceased_photo_url: string | null
           biography: string | null
@@ -66,6 +67,7 @@ export type Database = {
           brochure_url?: string | null
           status?: string | null
           featured?: boolean | null
+          is_visible?: boolean | null
           views_count?: number | null
           deceased_photo_url?: string | null
           biography?: string | null
@@ -96,6 +98,7 @@ export type Database = {
           brochure_url?: string | null
           status?: string | null
           featured?: boolean | null
+          is_visible?: boolean | null
           views_count?: number | null
           deceased_photo_url?: string | null
           biography?: string | null
@@ -115,25 +118,28 @@ export type Database = {
           id: string
           created_at: string
           funeral_id: string
+          author_id: string | null
           author_name: string | null
           message: string | null
-          is_approved: boolean | null
+          author_email: string | null
         }
         Insert: {
           id?: string
           created_at?: string
           funeral_id: string
+          author_id?: string | null
           author_name?: string | null
           message?: string | null
-          is_approved?: boolean | null
+          author_email?: string | null
         }
         Update: {
           id?: string
           created_at?: string
           funeral_id?: string
+          author_id?: string | null
           author_name?: string | null
           message?: string | null
-          is_approved?: boolean | null
+          author_email?: string | null
         }
         Relationships: [
           {

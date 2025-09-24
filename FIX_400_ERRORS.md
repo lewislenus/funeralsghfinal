@@ -1,0 +1,48 @@
+# Fix for 400 Errors - Database Migration Required
+
+## Problem
+The application is showing 400 errors because the `is_visible` column doesn't exist in the funerals table yet.
+
+## Solution
+Run the following SQL script in your Supabase dashboard:
+
+### Step 1: Open Supabase Dashboard
+1. Go to https://nyuprxdfgqymaktktqwx.supabase.co
+2. Navigate to SQL Editor
+
+### Step 2: Run Migration SQL
+Copy and paste the following SQL and click "RUN":
+
+```sql
+-- Add visibility column to funerals table for hide/show functionality
+-- This allows admins to hide funerals from public view without deleting them
+
+ALTER TABLE public.funerals 
+ADD COLUMN is_visible BOOLEAN DEFAULT TRUE;
+
+-- Create index for better performance when filtering by visibility
+CREATE INDEX idx_funerals_visibility ON public.funerals(is_visible);
+
+-- Update the RLS policy for public funeral viewing to include visibility check
+DROP POLICY IF EXISTS "Anyone can view approved funerals" ON public.funerals;
+
+CREATE POLICY "Anyone can view approved and visible funerals" ON public.funerals
+    FOR SELECT USING (status = 'approved' AND is_visible = TRUE);
+
+-- Add comment for documentation
+COMMENT ON COLUMN public.funerals.is_visible IS 'Controls whether the funeral is visible to the public. Admins can hide funerals without deleting them.';
+
+-- Update any existing funerals to be visible by default (if any exist)
+UPDATE public.funerals SET is_visible = TRUE WHERE is_visible IS NULL;
+```
+
+### Step 3: Verify Migration
+After running the SQL, you should see:
+- "Success. No rows returned" or similar success message
+- The is_visible column should now exist in the funerals table
+
+### Step 4: Restart the Application
+The 400 errors should be resolved and the hide/show functionality should work.
+
+## Alternative: Quick Fix
+If you can't access the Supabase dashboard immediately, you can temporarily comment out the visibility filter in the code until the migration is run.

@@ -30,7 +30,6 @@ export class CondolencesAPI {
         .from("condolences")
         .select("*")
         .eq("funeral_id", funeralId)
-        .eq("is_approved", true)
         .order("created_at", { ascending: false })
 
       if (error) {
@@ -57,7 +56,6 @@ export class CondolencesAPI {
         .from("condolences")
         .insert({
           ...condolence,
-          is_approved: false, // Require approval by default
         })
         .select()
         .single()
@@ -75,17 +73,12 @@ export class CondolencesAPI {
     }
   }
 
+  // Note: Approval workflow is not available in the current DB schema.
+  // Keeping method for compatibility; returns success without changing DB.
   async approveCondolence(id: string): Promise<{ error: string | null }> {
     try {
       this.checkEnvironment();
-      
-      const { error } = await this.supabase.from("condolences").update({ is_approved: true }).eq("id", id)
-
-      if (error) {
-        return { error: error.message }
-      }
-
-      return { error: null }
+      return { error: null };
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : "An unexpected error occurred",

@@ -53,6 +53,8 @@ function CreateFuneralContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [funeralData, setFuneralData] = useState<any>(null);
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdFuneralId, setCreatedFuneralId] = useState<string | null>(null);
 
   const funeralsAPI = new FuneralsAPI();
   const funeralId = searchParams.get('id');
@@ -173,9 +175,14 @@ function CreateFuneralContent() {
         router.push('/dashboard');
       } else {
         const insertData: FuneralInsert = { ...(processedData as FuneralInsert), user_id: user.id, status: 'pending' };
-        const { error: insertError } = await funeralsAPI.createFuneral(insertData);
+        const { data: created, error: insertError } = await funeralsAPI.createFuneral(insertData);
         if (insertError) throw new Error(insertError);
-        router.push('/dashboard?new=true');
+        if (created) {
+          setCreatedFuneralId(created.id?.toString?.() || String(created.id));
+          setShowSuccessModal(true);
+          // Optionally reset form for a fresh state (keep minimal fields)
+          reset();
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
@@ -506,6 +513,65 @@ function CreateFuneralContent() {
         </Card>
       </main>
       <Footer />
+      {showSuccessModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pending-approval-title"
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowSuccessModal(false)} />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 md:p-8">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-semibold text-xl shadow-lg">✓</div>
+                <div className="flex-1">
+                  <h2 id="pending-approval-title" className="text-2xl font-semibold text-slate-800 mb-2">Funeral Submitted</h2>
+                  <p className="text-slate-600 leading-relaxed">
+                    Your funeral announcement has been created and is currently <span className="font-medium text-amber-600">pending admin approval</span>.
+                    Once approved, it will appear publicly on the platform. You can track its status in your dashboard.
+                  </p>
+                  <div className="mt-4 text-sm text-slate-500 space-y-1">
+                    <p>Status now: <span className="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">Pending</span></p>
+                    <p>We usually review submissions within a short time.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Go to Dashboard
+                </Button>
+                {createdFuneralId && (
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => router.push(`/funeral/${createdFuneralId}`)}
+                  >
+                    View (Will Show After Approval)
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => { setShowSuccessModal(false); setCreatedFuneralId(null); }}
+                >
+                  Create Another
+                </Button>
+              </div>
+              <button
+                aria-label="Close"
+                onClick={() => setShowSuccessModal(false)}
+                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

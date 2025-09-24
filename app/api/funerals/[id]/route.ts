@@ -43,13 +43,13 @@ export async function PATCH(
     }
 
     const body = await request.json().catch(() => ({}));
-    const { status, featured } = body as { status?: string; featured?: boolean };
+    const { status, featured, is_visible } = body as { status?: string; featured?: boolean; is_visible?: boolean };
 
-    if (!status && typeof featured !== 'boolean') {
-      return NextResponse.json({ error: "Provide status or featured" }, { status: 400 });
+    if (!status && typeof featured !== 'boolean' && typeof is_visible !== 'boolean') {
+      return NextResponse.json({ error: "Provide status, featured, or is_visible" }, { status: 400 });
     }
 
-    const updates: { status?: string; featured?: boolean } = {};
+    const updates: { status?: string; featured?: boolean; is_visible?: boolean } = {};
     if (status) {
       const validStatuses = ["draft", "pending", "approved", "rejected", "completed"];
       if (!validStatuses.includes(status)) {
@@ -58,6 +58,7 @@ export async function PATCH(
       updates.status = status;
     }
     if (typeof featured === 'boolean') updates.featured = featured;
+    if (typeof is_visible === 'boolean') updates.is_visible = is_visible;
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -82,19 +83,17 @@ export async function PATCH(
       }
     });
 
-    // Validate UUID format
+    // Accept either UUIDs or numeric IDs (older datasets may use integers)
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
-    
-    if (!isUuid) {
-      return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
-    }
-    
-    console.log("PATCH: Processing UUID:", params.id);
+    const isNumeric = /^\d+$/.test(params.id);
+    const idFilterValue = isNumeric ? (Number(params.id) as any) : params.id;
+
+    console.log("PATCH: Processing funeral ID:", params.id);
     
     let { data, error } = await client
       .from('funerals')
       .update(updates)
-      .eq('id', params.id)
+  .eq('id', idFilterValue)
       .select('*')
       .maybeSingle();
 
@@ -102,6 +101,15 @@ export async function PATCH(
     if (error) {
       const msg = error.message?.toLowerCase() || '';
       const permissionLike = msg.includes('permission') || msg.includes('rls');
+      const columnError = msg.includes('column') && msg.includes('is_visible');
+      
+      if (columnError) {
+        console.error('Database schema error - is_visible column missing:', error);
+        return NextResponse.json({
+          error: 'Database schema needs to be updated. Please run the migration script: scripts/add-visibility-column.sql'
+        }, { status: 500 });
+      }
+      
       if (permissionLike && !serviceKey) {
         return NextResponse.json({
           error: 'Permission denied by Row Level Security. Add SUPABASE_SERVICE_ROLE_KEY to .env.local or log in as an admin user whose profile.role = "admin".'
@@ -116,7 +124,7 @@ export async function PATCH(
       const { data: exists, error: existsErr } = await client
         .from('funerals')
         .select('id')
-        .eq('id', params.id)
+        .eq('id', idFilterValue)
         .maybeSingle();
       if (existsErr) {
         return NextResponse.json({ error: 'Unable to verify update (RLS?)' }, { status: 403 });

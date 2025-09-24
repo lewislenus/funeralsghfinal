@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Heart, Users, Shield, Play, Star } from "lucide-react";
+import { ArrowRight, Heart, Users, Shield, Play, Star, Plus } from "lucide-react";
 import Marquee from "react-fast-marquee";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -142,9 +142,9 @@ export function HeroSection() {
                   size="lg"
                   className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-2xl px-10 py-6 text-lg font-semibold bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 relative z-30"
                 >
-                  <Link href="/about" className="flex items-center justify-center">
-                    <Play className="w-5 h-5 mr-3" />
-                    Watch Demo
+                  <Link href="/signup" className="flex items-center justify-center">
+                    <Plus className="w-5 h-5 mr-3" />
+                    Create Funeral
                   </Link>
                 </Button>
               </motion.div>

@@ -12,9 +12,10 @@ import { motion } from "framer-motion"
 
 interface GuestbookFormProps {
   funeralId: string
+  onSubmitted?: () => void
 }
 
-export function GuestbookForm({ funeralId }: GuestbookFormProps) {
+export function GuestbookForm({ funeralId, onSubmitted }: GuestbookFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -38,7 +39,6 @@ export function GuestbookForm({ funeralId }: GuestbookFormProps) {
           funeral_id: funeralId,
           author_name: formData.name,
           author_email: formData.email || null,
-          author_location: formData.location || null,
           message: formData.message,
         }),
       })
@@ -52,6 +52,11 @@ export function GuestbookForm({ funeralId }: GuestbookFormProps) {
       // Reset form and show success
       setFormData({ name: "", email: "", location: "", message: "" })
       setSubmitted(true)
+
+      // Trigger parent refresh
+      if (typeof onSubmitted === 'function') {
+        onSubmitted();
+      }
 
       // Hide success message after 5 seconds
       setTimeout(() => setSubmitted(false), 5000)

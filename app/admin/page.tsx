@@ -22,6 +22,7 @@ import {
   CheckCircle,
   XCircle,
   Eye,
+  EyeOff,
   Search,
   Filter,
   AlertTriangle,
@@ -31,6 +32,7 @@ import {
   Upload,
   BookOpen,
   Plus,
+  ExternalLink,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -46,6 +48,7 @@ type PendingFuneral = {
   funeral_date?: string | null;
   status: string;
   featured: boolean;
+  is_visible?: boolean;
 };
 
 export default function AdminDashboard() {
@@ -142,8 +145,9 @@ export default function AdminDashboard() {
         supabase.from("donations").select("amount"),
         supabase
           .from("condolences")
-          .select("id, message, author_name, funeral_id, is_approved, created_at")
-          .eq("is_approved", false),
+          .select("id, message, author_name, funeral_id, created_at")
+          .order("created_at", { ascending: false })
+          .limit(20),
       ]);
 
       const users = usersResult.data;
@@ -163,6 +167,7 @@ export default function AdminDashboard() {
           donations_count: funeral.donations_count || 0,
           status: funeral.status || "pending",
           featured: Boolean(funeral.featured || false),
+          is_visible: Boolean(funeral.is_visible ?? true),
         }));
         setPendingFunerals(allFunerals);
         setPendingCount(
@@ -219,6 +224,7 @@ export default function AdminDashboard() {
           donations_count: funeral.donations_count || 0,
           status: funeral.status || "pending",
           featured: Boolean(funeral.featured || false),
+          is_visible: Boolean(funeral.is_visible ?? true),
         }));
         setPendingFunerals(allFunerals);
         setPendingCount(
@@ -267,6 +273,7 @@ export default function AdminDashboard() {
           donations_count: funeral.donations_count || 0,
           status: funeral.status || "pending",
           featured: Boolean(funeral.featured || false),
+          is_visible: Boolean(funeral.is_visible ?? true),
         }));
         setPendingFunerals(allFunerals);
         setPendingCount(
@@ -310,6 +317,63 @@ export default function AdminDashboard() {
       } catch (error) {
         console.error("Error reloading brochures:", error);
       }
+    }
+  };
+
+  const handleToggleVisibility = async (id: string, currentVisibility: boolean) => {
+    try {
+      const newVisibility = !currentVisibility;
+      
+      // Call the API to update visibility
+      const response = await fetch(`/api/funerals/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_visible: newVisibility }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update visibility');
+      }
+
+      toast({
+        title: "Success",
+        description: `Funeral ${newVisibility ? 'shown' : 'hidden'} successfully.`,
+        variant: "default",
+      });
+
+      // Refresh the funeral data
+      const { funeralsAPI } = await import("@/lib/api/funerals");
+      const { data: funerals } = await funeralsAPI.getAdminFunerals();
+
+      if (Array.isArray(funerals)) {
+        const allFunerals = funerals.map((funeral) => ({
+          id: funeral.id.toString(),
+          user_id: funeral.user_id || "",
+          deceased_name: funeral.deceased_name,
+          created_at: funeral.created_at || new Date().toISOString(),
+          funeral_date: funeral.funeral_date,
+          organizer: funeral.family_name || "Not specified",
+          donations_total: funeral.donations_total || 0,
+          donations_count: funeral.donations_count || 0,
+          status: funeral.status || "pending",
+          featured: Boolean(funeral.featured || false),
+          is_visible: Boolean(funeral.is_visible ?? true),
+        }));
+        setPendingFunerals(allFunerals);
+        setPendingCount(
+          allFunerals.filter((f) => f.status === "pending").length
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling visibility:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle visibility. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -498,6 +562,15 @@ export default function AdminDashboard() {
                                   {funeral.status.charAt(0).toUpperCase() +
                                     funeral.status.slice(1)}
                                 </Badge>
+                                <Badge
+                                  className={`rounded-full ${
+                                    funeral.is_visible !== false
+                                      ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                  }`}
+                                >
+                                  {funeral.is_visible !== false ? "Visible" : "Hidden"}
+                                </Badge>
                               </div>
                               <div className="grid grid-cols-2 gap-4 mt-4">
                                 <div>
@@ -560,6 +633,28 @@ export default function AdminDashboard() {
                                 </>
                               )}
                               <Button
+                                onClick={() => handleToggleVisibility(funeral.id, funeral.is_visible !== false)}
+                                variant="outline"
+                                size="sm"
+                                className={`${
+                                  funeral.is_visible !== false
+                                    ? "border-orange-200 text-orange-600 hover:bg-orange-50"
+                                    : "border-green-200 text-green-600 hover:bg-green-50"
+                                }`}
+                              >
+                                {funeral.is_visible !== false ? (
+                                  <>
+                                    <EyeOff className="w-4 h-4 mr-1" />
+                                    Hide
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="w-4 h-4 mr-1" />
+                                    Show
+                                  </>
+                                )}
+                              </Button>
+                              <Button
                                 onClick={() => handleBrochureUpload(funeral.id)}
                                 variant="outline"
                                 size="sm"
@@ -576,7 +671,7 @@ export default function AdminDashboard() {
                                 size="sm"
                                 className="border-slate-200 text-slate-600 hover:bg-slate-50"
                               >
-                                <Eye className="w-4 h-4 mr-1" />
+                                <ExternalLink className="w-4 h-4 mr-1" />
                                 View
                               </Button>
                             </div>

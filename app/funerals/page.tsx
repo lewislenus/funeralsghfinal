@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { FuneralCard } from "@/components/funeral-card";
@@ -17,19 +19,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
-  MapPin,
   Filter,
   Search,
   Loader2,
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import type { FuneralWithStats } from "@/lib/api/funerals";
 
 interface FuneralFilters {
   search: string;
-  region: string;
   status: "upcoming" | "past" | "all";
   dateRange: "week" | "month" | "all";
   sortBy: "date" | "name" | "recent" | "popular";
@@ -44,30 +43,10 @@ export default function FuneralsPage() {
   // Filter states
   const [filters, setFilters] = useState<FuneralFilters>({
     search: "",
-    region: "all",
     status: "all",
     dateRange: "all",
     sortBy: "date",
   });
-
-  const regions = [
-    "Greater Accra",
-    "Ashanti",
-    "Northern",
-    "Western",
-    "Eastern",
-    "Central",
-    "Volta",
-    "Upper East",
-    "Upper West",
-    "Brong Ahafo",
-    "North East",
-    "Savannah",
-    "Oti",
-    "Ahafo",
-    "Bono East",
-    "Western North",
-  ];
 
   // Fetch funerals from API
   const fetchFunerals = async () => {
@@ -77,7 +56,6 @@ export default function FuneralsPage() {
 
       const params = new URLSearchParams();
       if (filters.search) params.append("search", filters.search);
-      if (filters.region !== "all") params.append("region", filters.region);
       if (filters.status !== "all") params.append("status", filters.status);
       if (filters.dateRange !== "all")
         params.append("dateRange", filters.dateRange);
@@ -117,7 +95,6 @@ export default function FuneralsPage() {
   const clearFilters = () => {
     setFilters({
       search: "",
-      region: "all",
       status: "all",
       dateRange: "all",
       sortBy: "date",
@@ -126,7 +103,6 @@ export default function FuneralsPage() {
 
   const hasActiveFilters =
     filters.search ||
-    filters.region !== "all" ||
     filters.status !== "all" ||
     filters.dateRange !== "all";
 
@@ -218,12 +194,6 @@ export default function FuneralsPage() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <span>{totalCount} Total Listings</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>
-                  {new Set(funerals.map((f) => f.region)).size} Regions Covered
-                </span>
-              </div>
             </div>
           </motion.div>
 
@@ -258,33 +228,7 @@ export default function FuneralsPage() {
                 </div>
 
                 {/* Filter Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Region Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Region
-                    </label>
-                    <Select
-                      value={filters.region}
-                      onValueChange={(value) =>
-                        handleFilterChange("region", value)
-                      }
-                    >
-                      <SelectTrigger className="rounded-xl border-slate-300">
-                        <MapPin className="w-4 h-4 mr-2 text-slate-400" />
-                        <SelectValue placeholder="All Regions" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Regions</SelectItem>
-                        {regions.map((region) => (
-                          <SelectItem key={region} value={region}>
-                            {region}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Sort Filter */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -444,7 +388,6 @@ export default function FuneralsPage() {
                               date: funeral.funeral_date || "",
                               time: funeral.funeral_time || "",
                               venue: funeral.venue || "",
-                              region: funeral.region || "",
                               location: funeral.location || "",
                             },
                             family: funeral.family_name || "",

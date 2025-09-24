@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { shareFuneralCard } from "@/lib/share";
 
 interface FuneralCardProps {
   funeral: {
@@ -32,7 +33,6 @@ interface FuneralCardProps {
       date: string;
       time: string;
       venue: string;
-      region: string;
       location: string;
     };
     family: string;
@@ -61,19 +61,7 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
   };
 
   const handleShare = () => {
-    const shareUrl = `${window.location.origin}/funeral/${funeral.id}`;
-    const shareText = `Join us in honoring the memory of ${funeral.deceased.name}`;
-
-    if (navigator.share) {
-      navigator.share({
-        title: `Memorial for ${funeral.deceased.name}`,
-        text: shareText,
-        url: shareUrl,
-      });
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      // You could show a toast notification here
-    }
+    shareFuneralCard(funeral.id, funeral.deceased.name);
   };
 
   return (
@@ -89,7 +77,7 @@ export function FuneralCard({ funeral }: FuneralCardProps) {
             alt={`${funeral.deceased.name} funeral poster`}
             width={400}
             height={240}
-            className="w-full h-60 object-cover group-hover:scale-110 transition-transform duration-700"
+            className="w-full h-60 object-cover object-top group-hover:scale-110 transition-transform duration-700"
           />
 
           {/* Overlay Badges */}

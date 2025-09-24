@@ -131,6 +131,9 @@ export class FuneralsAPI {
       // Only show approved funerals by default
       query = query.eq("status", "approved");
 
+      // Only show visible funerals (hide/show functionality)
+      query = query.eq("is_visible", true);
+
       // Apply search filter
       if (filters.search) {
         query = query.or(
@@ -235,10 +238,14 @@ export class FuneralsAPI {
         return { data: null, error: "Invalid funeral ID" };
       }
 
+      // Accept either UUIDs or numeric IDs
+      const isNumeric = /^\d+$/.test(id);
+      const idFilterValue: any = isNumeric ? Number(id) : id;
+
       const { data, error } = await this.supabase
         .from("funerals")
         .select("*, condolences(count), donations(amount)")
-        .eq("id", id)
+        .eq("id", idFilterValue)
         .single();
 
       if (error) {
@@ -322,6 +329,43 @@ export class FuneralsAPI {
       return { data, error: null };
     } catch (err) {
       console.error("Unexpected error updating funeral:", err);
+      return {
+        data: null,
+        error: "An unexpected error occurred",
+      };
+    }
+  }
+
+  async toggleFuneralVisibility(
+    id: string,
+    isVisible: boolean
+  ): Promise<{
+    data: Funeral | null;
+    error: string | null;
+  }> {
+    try {
+      if (!id || typeof id !== 'string') {
+        return { data: null, error: "Invalid funeral ID" };
+      }
+
+      const { data, error } = await this.supabase
+        .from("funerals")
+        .update({ is_visible: isVisible })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error toggling funeral visibility:", error);
+        return {
+          data: null,
+          error: "Failed to toggle funeral visibility",
+        };
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      console.error("Unexpected error toggling funeral visibility:", err);
       return {
         data: null,
         error: "An unexpected error occurred",

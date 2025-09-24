@@ -29,6 +29,7 @@ import { PdfDisplay } from "./pdf-display";
 import { motion } from "framer-motion";
 import { getPublicPdfUrl } from "@/lib/cloudinary-utils";
 import { brochureAPI, type Brochure } from "@/lib/api/brochure";
+import { nativeShareFuneral, platformShare } from "@/lib/share";
 
 interface FuneralEventPageProps {
   funeral: {
@@ -78,6 +79,15 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [brochures, setBrochures] = useState<Brochure[]>([]);
   const [loadingBrochures, setLoadingBrochures] = useState(true);
+  const [condolences, setCondolences] = useState<{
+    id: string;
+    name: string;
+    message: string;
+    location: string;
+    timestamp: string;
+    avatar?: string;
+  }[]>(funeral.condolences || []);
+  const [loadingCondolences, setLoadingCondolences] = useState(false);
 
   // Load brochures when component mounts
   useEffect(() => {
@@ -95,6 +105,33 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
     };
 
     loadBrochures();
+  }, [funeral.id]);
+
+  // Load condolences on mount
+  useEffect(() => {
+    const loadCondolences = async () => {
+      try {
+        setLoadingCondolences(true);
+        const { condolencesAPI } = await import("@/lib/api/condolences");
+        const { data, error } = await condolencesAPI.getCondolences(funeral.id);
+        if (!error && Array.isArray(data)) {
+          // Map to UI shape
+          const mapped = data.map((c: any) => ({
+            id: c.id?.toString?.() || String(c.id),
+            name: c.author_name || "Anonymous",
+            message: c.message || "",
+            location: "", // no location field in schema
+            timestamp: c.created_at,
+          }));
+          setCondolences(mapped);
+        }
+      } catch (err) {
+        console.error("Error loading condolences:", err);
+      } finally {
+        setLoadingCondolences(false);
+      }
+    };
+    loadCondolences();
   }, [funeral.id]);
 
   // Deterministic date formatter (UTC) to avoid hydration mismatch when server
@@ -118,26 +155,12 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
     return death.getFullYear() - birth.getFullYear();
   };
 
-  const shareUrl = `https://funeralsghana.com/funeral/${funeral.id}`;
-
-  const handleShare = (platform: string) => {
-    const text = `Join us in honoring the memory of ${funeral.deceased.name}`;
-    const urls = {
-      whatsapp: `https://wa.me/?text=${encodeURIComponent(
-        text + " " + shareUrl
-      )}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-        shareUrl
-      )}`,
-      copy: shareUrl,
-    };
-
-    if (platform === "copy") {
-      navigator.clipboard.writeText(shareUrl);
-      alert("Link copied to clipboard!");
-    } else {
-      window.open(urls[platform as keyof typeof urls], "_blank");
+  const handleSharePlatform = (platform: string) => {
+    if (platform === 'native') {
+      nativeShareFuneral(funeral.id, funeral.deceased.name, 'event_page');
+      return;
     }
+    platformShare({ funeralId: funeral.id, name: funeral.deceased.name, platform: platform as any, source: 'event_page' });
   };
 
   return (
@@ -224,21 +247,21 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-4">
                 <Button
-                  onClick={() => handleShare("whatsapp")}
+                  onClick={() => handleSharePlatform("whatsapp")}
                   className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6"
                 >
                   <Share2 className="w-4 h-4 mr-2" />
                   WhatsApp
                 </Button>
                 <Button
-                  onClick={() => handleShare("facebook")}
+                  onClick={() => handleSharePlatform("facebook")}
                   className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6"
                 >
                   <Share2 className="w-4 h-4 mr-2" />
                   Facebook
                 </Button>
                 <Button
-                  onClick={() => handleShare("copy")}
+                  onClick={() => handleSharePlatform("copy")}
                   variant="outline"
                   className="border-white/30 text-white hover:bg-white/10 rounded-xl px-6"
                 >
@@ -468,18 +491,38 @@ export function FuneralEventPage({ funeral }: FuneralEventPageProps) {
                 transition={{ duration: 0.5 }}
                 className="space-y-8"
               >
-                <GuestbookForm funeralId={funeral.id} />
+                <GuestbookForm funeralId={funeral.id} onSubmitted={async () => {
+                  // Reload condolences after a successful submission
+                  try {
+                    const { condolencesAPI } = await import("@/lib/api/condolences");
+                    const { data } = await condolencesAPI.getCondolences(funeral.id);
+                    const mapped = (data || []).map((c: any) => ({
+                      id: c.id?.toString?.() || String(c.id),
+                      name: c.author_name || "Anonymous",
+                      message: c.message || "",
+                      location: "",
+                      timestamp: c.created_at,
+                    }));
+                    setCondolences(mapped);
+                  } catch (e) {
+                    console.error("Failed to refresh condolences:", e);
+                  }
+                }} />
 
                 <Card className="border-0 shadow-lg">
                   <CardHeader>
                     <CardTitle className="flex items-center text-xl text-slate-800">
                       <MessageCircle className="w-5 h-5 mr-2 text-amber-600" />
-                      Condolence Messages ({funeral.condolences.length})
+                      Condolence Messages ({condolences.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      {funeral.condolences.map((condolence) => (
+                      {loadingCondolences ? (
+                        <div className="p-4 text-slate-500">Loading messages...</div>
+                      ) : condolences.length === 0 ? (
+                        <div className="p-4 text-slate-500">No messages yet. Be the first to leave a condolence.</div>
+                      ) : condolences.map((condolence) => (
                         <div
                           key={condolence.id}
                           className="flex space-x-4 p-4 bg-slate-50 rounded-xl"

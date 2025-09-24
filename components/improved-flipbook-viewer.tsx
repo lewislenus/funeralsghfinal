@@ -22,6 +22,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import { configurePdfWorker, loadPdf } from "@/lib/pdf-utils";
 import { getPublicPdfUrl } from "@/lib/cloudinary-utils";
 import { Button } from "@/components/ui/button";
+import { shareLink } from "@/lib/share";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -235,19 +236,7 @@ export function ImprovedFlipbookViewer({
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: title,
-          text: description,
-          url: publicPdfUrl,
-        });
-      } catch (err) {
-        navigator.clipboard?.writeText(publicPdfUrl);
-      }
-    } else {
-      navigator.clipboard?.writeText(publicPdfUrl);
-    }
+    await shareLink({ url: publicPdfUrl, title, text: description, source: 'flipbook_viewer' });
   };
 
   const FullViewer = () => (
